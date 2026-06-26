@@ -184,9 +184,9 @@ export async function SiteHeader() {
           className="font-display text-[23px] leading-none font-semibold tracking-[.2px]"
           style={{ color: "var(--silver-bright)" }}
         >
-          margi
+          margin
           <i className="italic" style={{ color: "var(--ember-soft)" }}>
-            nalia
+            alia
           </i>
         </span>
       </Link>
