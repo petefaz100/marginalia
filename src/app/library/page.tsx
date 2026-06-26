@@ -117,9 +117,39 @@ function ResultRow({
   );
 }
 
+// A folded diagonal corner banner, à la classic "ribbon" badges. Clipped to a
+// small square at the cover's top-right corner so the ends tuck under the edge.
+function IndieRibbon() {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute top-0 right-0 z-10 h-[78px] w-[78px] overflow-hidden"
+    >
+      <div
+        className="absolute text-center font-bold uppercase"
+        style={{
+          top: 14,
+          right: -24,
+          width: 110,
+          transform: "rotate(45deg)",
+          background: "var(--ember)",
+          color: "#fff",
+          fontSize: 10,
+          letterSpacing: ".12em",
+          padding: "3px 0",
+          boxShadow: "0 2px 5px rgba(0,0,0,.35)",
+        }}
+      >
+        Indie
+      </div>
+    </div>
+  );
+}
+
 function BookCard({
   book,
   empty,
+  indie = false,
 }: {
   book: {
     id: string;
@@ -128,6 +158,7 @@ function BookCard({
     cover_url: string | null;
   };
   empty: boolean;
+  indie?: boolean;
 }) {
   return (
     <Link href={`/books/${book.id}`} className="group block">
@@ -141,6 +172,7 @@ function BookCard({
         >
           <CoverArt url={book.cover_url} title={book.title} />
         </div>
+        {indie ? <IndieRibbon /> : null}
       </div>
       <p
         className="truncate text-[13px] font-semibold"
@@ -162,7 +194,8 @@ export default async function Library({
 }) {
   const { q, sort: sortParam, page: pageParam } = await searchParams;
   const query = (q ?? "").trim();
-  const sort: "az" | "recent" = sortParam === "recent" ? "recent" : "az";
+  const sort: "az" | "recent" | "indie" =
+    sortParam === "recent" ? "recent" : sortParam === "indie" ? "indie" : "az";
 
   const supabase = await createClient();
   const {
@@ -172,7 +205,7 @@ export default async function Library({
   // Fetched newest-first; that order is used directly for "Recently added".
   const { data: books } = await supabase
     .from("books")
-    .select("id, title, author, year, cover_url, google_books_id")
+    .select("id, title, author, year, cover_url, google_books_id, is_indie")
     .order("created_at", { ascending: false });
   const addedIds = new Set(
     (books ?? []).map((b) => b.google_books_id).filter(Boolean) as string[],
@@ -193,10 +226,17 @@ export default async function Library({
   );
   const hasArt = (id: string) => (artCount.get(id) ?? 0) > 0;
 
-  // Default (A–Z): books with art first, alphabetically, then the empty ones.
-  // Recently added keeps the newest-first order from the query.
+  // "Indie books" narrows to reader-published titles; the other sorts show the
+  // whole collection.
+  const visible =
+    sort === "indie"
+      ? (books ?? []).filter((b) => b.is_indie)
+      : (books ?? []);
+
+  // Default (A–Z) and Indie: books with art first, alphabetically, then the
+  // empty ones. Recently added keeps the newest-first order from the query.
   const collator = new Intl.Collator(undefined, { sensitivity: "base" });
-  const library = [...(books ?? [])].sort((a, b) => {
+  const library = [...visible].sort((a, b) => {
     if (sort === "recent") return 0; // stable: preserve created_at desc
     const diff = (hasArt(b.id) ? 1 : 0) - (hasArt(a.id) ? 1 : 0);
     if (diff !== 0) return diff;
@@ -214,7 +254,7 @@ export default async function Library({
   const pageHref = (p: number) => {
     const params = new URLSearchParams();
     if (query) params.set("q", query);
-    if (sort === "recent") params.set("sort", "recent");
+    if (sort !== "az") params.set("sort", sort);
     if (p > 1) params.set("page", String(p));
     return params.toString() ? `/library?${params}` : "/library";
   };
@@ -307,12 +347,13 @@ export default async function Library({
                   [
                     ["az", "A–Z"],
                     ["recent", "Recently added"],
+                    ["indie", "Indie books"],
                   ] as const
                 ).map(([key, label]) => {
                   const active = sort === key;
                   const params = new URLSearchParams();
                   if (query) params.set("q", query);
-                  if (key === "recent") params.set("sort", "recent");
+                  if (key !== "az") params.set("sort", key);
                   const href = params.toString()
                     ? `/library?${params}`
                     : "/library";
@@ -359,7 +400,12 @@ export default async function Library({
             <>
               <div className="grid grid-cols-3 gap-x-3 gap-y-5 sm:grid-cols-4 sm:gap-x-4 lg:grid-cols-6">
                 {pageItems.map((book) => (
-                  <BookCard key={book.id} book={book} empty={!hasArt(book.id)} />
+                  <BookCard
+                    key={book.id}
+                    book={book}
+                    empty={!hasArt(book.id)}
+                    indie={book.is_indie}
+                  />
                 ))}
               </div>
 
