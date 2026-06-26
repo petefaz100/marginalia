@@ -38,31 +38,54 @@ function ResultRow({
   result,
   signedIn,
   alreadyAdded,
+  bookId,
 }: {
   result: BookSearchResult;
   signedIn: boolean;
   alreadyAdded: boolean;
+  bookId?: string;
 }) {
+  // Already-added books link straight to their page in the library so a reader
+  // who searches for something they own can jump right to it.
+  const cover = (
+    <div className="h-[66px] w-[44px] shrink-0 overflow-hidden rounded-[8px]">
+      <CoverArt url={result.coverUrl} title={result.title} radius="8px" />
+    </div>
+  );
+  const meta = (
+    <div className="min-w-0 flex-1">
+      <p
+        className="truncate text-[14px] font-semibold"
+        style={{ color: "var(--silver-bright)" }}
+      >
+        {result.title}
+      </p>
+      <p className="truncate text-[12.5px]" style={{ color: "var(--muted)" }}>
+        {result.author ?? "Unknown author"}
+        {result.year ? ` · ${result.year}` : ""}
+      </p>
+    </div>
+  );
+
   return (
     <li
       className="flex items-center gap-3 rounded-[var(--radius-sm)] p-2.5"
       style={{ border: "1px solid var(--line)", background: "var(--obsidian-2)" }}
     >
-      <div className="h-[66px] w-[44px] shrink-0 overflow-hidden rounded-[8px]">
-        <CoverArt url={result.coverUrl} title={result.title} radius="8px" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p
-          className="truncate text-[14px] font-semibold"
-          style={{ color: "var(--silver-bright)" }}
+      {bookId ? (
+        <Link
+          href={`/books/${bookId}`}
+          className="flex min-w-0 flex-1 items-center gap-3"
         >
-          {result.title}
-        </p>
-        <p className="truncate text-[12.5px]" style={{ color: "var(--muted)" }}>
-          {result.author ?? "Unknown author"}
-          {result.year ? ` · ${result.year}` : ""}
-        </p>
-      </div>
+          {cover}
+          {meta}
+        </Link>
+      ) : (
+        <>
+          {cover}
+          {meta}
+        </>
+      )}
       <form action={addBook} className="shrink-0">
         <input type="hidden" name="googleBooksId" value={result.googleBooksId} />
         <input type="hidden" name="title" value={result.title} />
@@ -135,9 +158,9 @@ function BookCard({
 export default async function Library({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; page?: string }>;
 }) {
-  const { q, sort: sortParam } = await searchParams;
+  const { q, sort: sortParam, page: pageParam } = await searchParams;
   const query = (q ?? "").trim();
   const sort: "az" | "recent" = sortParam === "recent" ? "recent" : "az";
 
@@ -153,6 +176,13 @@ export default async function Library({
     .order("created_at", { ascending: false });
   const addedIds = new Set(
     (books ?? []).map((b) => b.google_books_id).filter(Boolean) as string[],
+  );
+  // google_books_id → our internal book id, so an already-added search result
+  // can link straight to its library page.
+  const bookIdByGoogleId = new Map<string, string>(
+    (books ?? [])
+      .filter((b) => b.google_books_id)
+      .map((b) => [b.google_books_id as string, b.id]),
   );
 
   // Which books actually have approved art (counts only — bypasses the
@@ -172,6 +202,22 @@ export default async function Library({
     if (diff !== 0) return diff;
     return collator.compare(a.title, b.title);
   });
+
+  // Paginate the library grid so it stays light as the collection grows.
+  const PAGE_SIZE = 18;
+  const totalPages = Math.max(1, Math.ceil(library.length / PAGE_SIZE));
+  const page = Math.min(Math.max(1, Number(pageParam) || 1), totalPages);
+  const pageItems = library.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Build a /library href that preserves the current query + sort, swapping in
+  // a given page (page 1 is left implicit to keep URLs clean).
+  const pageHref = (p: number) => {
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    if (sort === "recent") params.set("sort", "recent");
+    if (p > 1) params.set("page", String(p));
+    return params.toString() ? `/library?${params}` : "/library";
+  };
 
   let results: BookSearchResult[] = [];
   let searchError: string | null = null;
@@ -239,6 +285,7 @@ export default async function Library({
                     result={r}
                     signedIn={!!user}
                     alreadyAdded={addedIds.has(r.googleBooksId)}
+                    bookId={bookIdByGoogleId.get(r.googleBooksId)}
                   />
                 ))}
               </ul>
@@ -309,11 +356,76 @@ export default async function Library({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-x-3 gap-y-5 sm:grid-cols-4 sm:gap-x-4 lg:grid-cols-6">
-              {library.map((book) => (
-                <BookCard key={book.id} book={book} empty={!hasArt(book.id)} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-3 gap-x-3 gap-y-5 sm:grid-cols-4 sm:gap-x-4 lg:grid-cols-6">
+                {pageItems.map((book) => (
+                  <BookCard key={book.id} book={book} empty={!hasArt(book.id)} />
+                ))}
+              </div>
+
+              {totalPages > 1 ? (
+                <nav
+                  className="mt-8 flex items-center justify-center gap-2"
+                  aria-label="Library pages"
+                >
+                  {page > 1 ? (
+                    <Link
+                      href={pageHref(page - 1)}
+                      scroll={false}
+                      className="flex h-9 items-center rounded-full px-3.5 text-[12.5px] font-semibold"
+                      style={{
+                        border: "1px solid var(--line)",
+                        background: "var(--obsidian-2)",
+                        color: "var(--silver)",
+                      }}
+                    >
+                      ← Prev
+                    </Link>
+                  ) : null}
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (p) => {
+                      const active = p === page;
+                      return (
+                        <Link
+                          key={p}
+                          href={pageHref(p)}
+                          scroll={false}
+                          aria-current={active ? "page" : undefined}
+                          className="grid h-9 min-w-9 place-items-center rounded-full px-2.5 text-[12.5px] font-semibold"
+                          style={
+                            active
+                              ? { background: "var(--ember)", color: "#fff" }
+                              : {
+                                  border: "1px solid var(--line)",
+                                  background: "var(--obsidian-2)",
+                                  color: "var(--silver)",
+                                }
+                          }
+                        >
+                          {p}
+                        </Link>
+                      );
+                    },
+                  )}
+
+                  {page < totalPages ? (
+                    <Link
+                      href={pageHref(page + 1)}
+                      scroll={false}
+                      className="flex h-9 items-center rounded-full px-3.5 text-[12.5px] font-semibold"
+                      style={{
+                        border: "1px solid var(--line)",
+                        background: "var(--obsidian-2)",
+                        color: "var(--silver)",
+                      }}
+                    >
+                      Next →
+                    </Link>
+                  ) : null}
+                </nav>
+              ) : null}
+            </>
           )}
         </section>
       </main>

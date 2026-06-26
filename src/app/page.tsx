@@ -517,15 +517,18 @@ export default function Home() {
               boxShadow: "var(--shadow)",
             }}
           >
-            <SectionTitle>Stay in the margins, not the spoilers.</SectionTitle>
+            <SectionTitle>Help build the margins.</SectionTitle>
             <p
               className="mx-auto mt-4 max-w-[480px] text-[15px] leading-relaxed"
               style={{ color: "var(--silver)" }}
             >
-              Pick a book, set your chapter, and let the art catch up to you —
-              never the other way around.
+              Artist, author, or reader — marginalia is built by its community.
+              Submit an application to become a mod, add spoiler-safe art, and
+              help shape the home for the books you love.
             </p>
-            <CtaPair className="mt-7 justify-center" />
+            <div className="mt-7 flex justify-center">
+              <PrimaryCta href="/apply">Apply to be a Mod</PrimaryCta>
+            </div>
           </div>
         </section>
       </main>
