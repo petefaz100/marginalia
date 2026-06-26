@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { SiteHeader } from "../_components/site-header";
 import { approveArt, rejectArt } from "./actions";
 
+export const metadata = { title: "Moderation" };
+
 export default async function ModeratePage() {
   const supabase = await createClient();
 

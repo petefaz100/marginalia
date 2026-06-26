@@ -22,7 +22,10 @@ const splineMono = Spline_Sans_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "marginalia",
+  title: {
+    default: "marginalia",
+    template: "%s · marginalia",
+  },
   description:
     "A spoiler-safe reading companion — share fan art chapter by chapter, with everything past your current chapter kept hidden until you mark it read.",
 };

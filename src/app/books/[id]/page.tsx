@@ -25,6 +25,27 @@ function LockIcon() {
   );
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: book } = await supabase
+    .from("books")
+    .select("title, author")
+    .eq("id", id)
+    .maybeSingle();
+  if (!book) return { title: "Book not found" };
+  return {
+    title: book.title,
+    description: book.author
+      ? `Fan art for ${book.title} by ${book.author}, chapter by chapter.`
+      : `Fan art for ${book.title}, chapter by chapter.`,
+  };
+}
+
 export default async function BookPage({
   params,
 }: {
