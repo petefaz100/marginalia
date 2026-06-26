@@ -4,6 +4,7 @@ import { addBook } from "../books/actions";
 import { searchBooks, type BookSearchResult } from "@/lib/google-books";
 import { SiteHeader } from "../_components/site-header";
 import { CoverArt } from "../_components/cover-art";
+import { AddButton } from "./add-button";
 
 export const metadata = { title: "Library" };
 
@@ -92,26 +93,7 @@ function ResultRow({
         <input type="hidden" name="author" value={result.author ?? ""} />
         <input type="hidden" name="year" value={result.year ?? ""} />
         <input type="hidden" name="coverUrl" value={result.coverUrl ?? ""} />
-        <button
-          type="submit"
-          disabled={!signedIn || alreadyAdded}
-          className="h-9 rounded-full px-3.5 text-[12.5px] font-semibold disabled:cursor-default"
-          style={
-            alreadyAdded
-              ? {
-                  border: "1px solid var(--line)",
-                  background: "transparent",
-                  color: "var(--muted-2)",
-                }
-              : {
-                  border: "1px solid var(--line-2)",
-                  background: "var(--obsidian-3)",
-                  color: signedIn ? "var(--ember-soft)" : "var(--muted-2)",
-                }
-          }
-        >
-          {alreadyAdded ? "Added" : "Add"}
-        </button>
+        <AddButton signedIn={signedIn} alreadyAdded={alreadyAdded} />
       </form>
     </li>
   );
@@ -390,10 +372,12 @@ export default async function Library({
               }}
             >
               <p className="text-[14px]" style={{ color: "var(--silver)" }}>
-                No books yet.
+                {sort === "indie" ? "No indie books yet." : "No books yet."}
               </p>
               <p className="mt-1 text-[13px]" style={{ color: "var(--muted)" }}>
-                Search above to add the first one.
+                {sort === "indie"
+                  ? "Indie titles will show up here as they're added."
+                  : "Search above to add the first one."}
               </p>
             </div>
           ) : (

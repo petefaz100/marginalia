@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import { setReadThrough } from "../actions";
 import { ArtGallery, type GalleryArt } from "../../_components/art-gallery";
 import { ArtCarousel } from "../../_components/art-carousel";
 import { ChapterTalk, type ChapterComment } from "./chapter-talk";
 
 type Chapter = { id: string; number: number; title: string | null };
-type TabKey = "art" | "gallery" | "talk";
+type TabKey = "art" | "talk";
+type ArtLayout = "carousel" | "grid";
 
 function FrameIcon() {
   return (
@@ -68,6 +70,17 @@ function Arrow({ dir }: { dir: "left" | "right" }) {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       {dir === "left" ? <polyline points="15 18 9 12 15 6" /> : <polyline points="9 18 15 12 9 6" />}
+    </svg>
+  );
+}
+
+// A small spinning ring, shown on a button while its form action is in flight
+// so a tap feels instant instead of "did that work?".
+function Spinner({ size = 14 }: { size?: number }) {
+  return (
+    <svg className="animate-spin" width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+      <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
     </svg>
   );
 }
@@ -142,22 +155,33 @@ function MarkReadButton({
     <form action={setReadThrough} className="shrink-0">
       <input type="hidden" name="bookId" value={bookId} />
       <input type="hidden" name="through" value={through} />
-      <button
-        type="submit"
-        className="flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[12.5px] font-semibold"
-        style={
-          filled
-            ? { background: "var(--ember)", color: "#fff" }
-            : {
-                border: "1px solid var(--line-2)",
-                background: "var(--obsidian-3)",
-                color: "var(--silver)",
-              }
-        }
-      >
-        {label}
-      </button>
+      <MarkReadSubmit label={label} filled={filled} />
     </form>
+  );
+}
+
+// The submit button lives in its own component so it can read useFormStatus —
+// that hook only reports the pending state of the <form> it's rendered inside.
+function MarkReadSubmit({ label, filled }: { label: string; filled: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[12.5px] font-semibold disabled:opacity-70"
+      style={
+        filled
+          ? { background: "var(--ember)", color: "#fff" }
+          : {
+              border: "1px solid var(--line-2)",
+              background: "var(--obsidian-3)",
+              color: "var(--silver)",
+            }
+      }
+    >
+      {pending ? <Spinner /> : null}
+      {label}
+    </button>
   );
 }
 
@@ -197,6 +221,8 @@ export function ChapterSection({
 
   const [focus, setFocus] = useState(initialFocus);
   const [tab, setTab] = useState<TabKey>(initialHasArt ? "art" : "talk");
+  // The Art tab can show as a swipeable carousel or a grid; the reader picks.
+  const [artLayout, setArtLayout] = useState<ArtLayout>("carousel");
   const [query, setQuery] = useState("");
   // Both galleries are collapsed by default — a freshly opened book shows only
   // the position line, the search, and the chapter browser. The reader opts in
@@ -508,12 +534,12 @@ export function ChapterSection({
 
         {unlocked ? (
           <>
-            {/* Tabs */}
+            {/* Tabs — just Art and Talk now; the old "Gallery" is folded into
+                Art as a layout toggle (carousel vs grid). */}
             <div className="mt-3 flex gap-2">
               {(
                 [
                   ["art", "Art", <FrameIcon key="f" />],
-                  ["gallery", "Gallery", <GridIcon key="g" />],
                   ["talk", "Talk", <TalkIcon key="t" />],
                 ] as const
               ).map(([key, label, icon]) => {
@@ -548,15 +574,45 @@ export function ChapterSection({
 
             {tab === "art" ? (
               focusedArt.length > 0 ? (
-                <ArtCarousel art={focusedArt} bookId={bookId} isMod={isMod} />
-              ) : (
-                <p className="mt-3 text-[13px]" style={{ color: "var(--muted)" }}>
-                  No art yet for this chapter.
-                </p>
-              )
-            ) : tab === "gallery" ? (
-              focusedArt.length > 0 ? (
-                <ArtGallery art={focusedArt} bookId={bookId} isMod={isMod} />
+                <>
+                  {/* Carousel ↔ grid layout toggle for the art view. */}
+                  <div className="mt-3 flex items-center justify-end gap-1.5">
+                    {(
+                      [
+                        ["carousel", <FrameIcon key="c" />, "Carousel view"],
+                        ["grid", <GridIcon key="g" />, "Grid view"],
+                      ] as const
+                    ).map(([key, icon, label]) => {
+                      const active = artLayout === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setArtLayout(key)}
+                          aria-label={label}
+                          aria-pressed={active}
+                          className="grid h-7 w-7 place-items-center rounded-[7px]"
+                          style={
+                            active
+                              ? { background: "var(--ember)", color: "#fff" }
+                              : {
+                                  border: "1px solid var(--line-2)",
+                                  background: "var(--obsidian-3)",
+                                  color: "var(--silver)",
+                                }
+                          }
+                        >
+                          {icon}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {artLayout === "carousel" ? (
+                    <ArtCarousel art={focusedArt} bookId={bookId} isMod={isMod} />
+                  ) : (
+                    <ArtGallery art={focusedArt} bookId={bookId} isMod={isMod} />
+                  )}
+                </>
               ) : (
                 <p className="mt-3 text-[13px]" style={{ color: "var(--muted)" }}>
                   No art yet for this chapter.
