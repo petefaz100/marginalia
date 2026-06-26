@@ -1,26 +1,98 @@
 @import "tailwindcss";
 
+/* ---------------- marginalia design tokens (ported from prototype) ---------------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --obsidian: #131119;
+  --obsidian-2: #1b1925;
+  --obsidian-3: #252231;
+  --obsidian-4: #2f2b3d;
+  --line: #322e42;
+  --line-2: #403a52;
+  --silver: #ccd1db;
+  --silver-bright: #eef1f6;
+  --muted: #8d8a9b;
+  --muted-2: #6a667a;
+  --ember: #e0683f;
+  --ember-soft: #eaa17f;
+  --wine: #8a3a5b;
+  --wine-soft: #b25c7d;
+  --gilt: #c9a25e;
+  --flame-1: #dfe6f2;
+  --flame-2: #9fb6e0;
+  --flame-3: #6f8fc9;
+  --ok: #6db28a;
+  --radius: 18px;
+  --radius-sm: 13px;
+  --shadow: 0 20px 44px -24px rgba(0, 0, 0, 0.85);
+  --maxw: 540px;
+  --tap: 46px;
 }
 
+/* Expose tokens to Tailwind utilities (bg-obsidian, text-ember, font-display, etc.) */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-obsidian: var(--obsidian);
+  --color-obsidian-2: var(--obsidian-2);
+  --color-obsidian-3: var(--obsidian-3);
+  --color-obsidian-4: var(--obsidian-4);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-silver: var(--silver);
+  --color-silver-bright: var(--silver-bright);
+  --color-muted: var(--muted);
+  --color-muted-2: var(--muted-2);
+  --color-ember: var(--ember);
+  --color-ember-soft: var(--ember-soft);
+  --color-wine: var(--wine);
+  --color-wine-soft: var(--wine-soft);
+  --color-gilt: var(--gilt);
+  --color-flame-1: var(--flame-1);
+  --color-flame-2: var(--flame-2);
+  --color-flame-3: var(--flame-3);
+  --color-ok: var(--ok);
+
+  --font-display: var(--font-fraunces);
+  --font-sans: var(--font-mulish);
+  --font-mono: var(--font-spline-mono);
+
+  --radius-card: var(--radius);
+  --radius-sm: var(--radius-sm);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-mulish), system-ui, -apple-system, sans-serif;
+  background: radial-gradient(
+    125% 70% at 50% -8%,
+    #221d30 0%,
+    var(--obsidian) 52%,
+    #0e0d12 100%
+  );
+  background-attachment: fixed;
+  color: var(--silver);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+  min-height: 100%;
+  overflow-x: hidden;
+  font-size: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001s !important;
+    transition-duration: 0.06s !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--ember);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
