@@ -56,6 +56,14 @@ function SearchIcon() {
   );
 }
 
+function CheckIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
 function Arrow({ dir }: { dir: "left" | "right" }) {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -136,7 +144,7 @@ function MarkReadButton({
       <input type="hidden" name="through" value={through} />
       <button
         type="submit"
-        className="flex h-8 items-center gap-1 rounded-full px-3 text-[12px] font-semibold"
+        className="flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[12.5px] font-semibold"
         style={
           filled
             ? { background: "var(--ember)", color: "#fff" }
@@ -153,13 +161,13 @@ function MarkReadButton({
   );
 }
 
-// The chapters area of a book page. Up top sits an always-on search + a "what
-// chapter are you on?" picker that sets your reading position (the value the
-// spoiler gate compares against). Below that, a focused single-chapter view for
-// reading one chapter's art and discussion. Art you've unlocked shows for real;
-// art from chapters you haven't reached appears only as blurred, chapter-
-// labelled teaser tiles — the real images are never sent to the browser, so the
-// gate is enforced server-side (RLS), not by CSS.
+// The chapters area of a book page. There is ONE chapter control — a browser
+// you step through to look at any chapter. Looking never changes your spoiler
+// line; you set your place deliberately with the "Mark read" button on the
+// chapter card. Art you've unlocked shows for real; art from chapters you
+// haven't reached appears only as blurred, chapter-labelled teaser tiles — the
+// real images are never sent to the browser, so the gate is enforced
+// server-side (RLS), not by CSS.
 export function ChapterSection({
   bookId,
   chapters,
@@ -195,10 +203,6 @@ export function ChapterSection({
   // to seeing the full unlocked grid and/or the locked teasers.
   const [showUnlocked, setShowUnlocked] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
-  // The "what chapter are you on?" dropdown is controlled so the Confirm button
-  // submits whatever's currently picked. It re-initialises to the saved value
-  // whenever the page re-renders after a save.
-  const [chapterChoice, setChapterChoice] = useState(readThrough);
 
   if (total === 0) {
     return (
@@ -253,69 +257,55 @@ export function ChapterSection({
   }
   const lockedCount = lockedTeasers.length;
 
+  // Shared styling for the two opt-in toggle pills under the search bar.
+  const pillBase =
+    "flex h-8 items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold transition-colors";
+  const pillOn = { background: "var(--ember)", color: "#fff" } as const;
+  const pillOff = {
+    border: "1px solid var(--line-2)",
+    background: "var(--obsidian-2)",
+    color: "var(--silver)",
+  } as const;
+
   return (
     <>
-      {/* Position line */}
-      <p className="mb-2 text-[13px]" style={{ color: "var(--muted)" }}>
-        {readThrough > 0 ? (
-          <>
-            You&apos;re on{" "}
-            <span style={{ color: "var(--silver-bright)" }}>
-              chapter {readThrough}
-            </span>{" "}
-            of {total}.
-          </>
-        ) : (
-          "You haven't started yet — set the chapter you're on to reveal its art and discussion."
-        )}
-      </p>
-
-      {/* "What chapter are you on?" — sets reading progress (the spoiler gate). */}
-      <form
-        action={setReadThrough}
-        className="mb-4 flex flex-wrap items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2.5"
+      {/* Reading-progress banner: where you are + a one-line cue for how to set
+          it (browse to your chapter, tap Mark read). */}
+      <div
+        className="mb-4 rounded-[var(--radius-sm)] px-3.5 py-3"
         style={{ border: "1px solid var(--line)", background: "var(--obsidian-2)" }}
       >
-        <input type="hidden" name="bookId" value={bookId} />
-        <label
-          className="text-[12.5px] font-semibold"
-          style={{ color: "var(--ember-soft)" }}
-          htmlFor="chapter-on"
-        >
-          What chapter are you on?
-        </label>
-        <select
-          id="chapter-on"
-          name="through"
-          value={chapterChoice}
-          onChange={(e) => setChapterChoice(Number(e.target.value))}
-          className="h-9 min-w-[8rem] flex-1 rounded-[8px] px-2 text-[13px] outline-none"
-          style={{
-            border: "1px solid var(--line-2)",
-            background: "var(--obsidian-3)",
-            color: "var(--silver-bright)",
-          }}
-        >
-          <option value={0}>Not started yet</option>
-          {chapters.map((c) => (
-            <option key={c.id} value={c.number}>
-              {c.title ? `Ch. ${c.number} · ${c.title}` : `Chapter ${c.number}`}
-            </option>
-          ))}
-        </select>
-        <button
-          type="submit"
-          className="flex h-9 shrink-0 items-center gap-1.5 rounded-full px-4 text-[12.5px] font-semibold"
-          style={{ background: "var(--ember)", color: "#fff" }}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          Confirm
-        </button>
-      </form>
+        {readThrough > 0 ? (
+          <>
+            <p className="text-[13.5px]" style={{ color: "var(--silver)" }}>
+              You&apos;re on{" "}
+              <span className="font-semibold" style={{ color: "var(--silver-bright)" }}>
+                chapter {readThrough}
+              </span>{" "}
+              of {total}.
+            </p>
+            <p className="mt-0.5 text-[12px]" style={{ color: "var(--muted)" }}>
+              Art and discussion are unlocked through here. Reached a new
+              chapter? Browse to it below and tap{" "}
+              <span style={{ color: "var(--ember-soft)" }}>Mark read</span>.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-[13.5px]" style={{ color: "var(--silver)" }}>
+              You haven&apos;t set your place yet.
+            </p>
+            <p className="mt-0.5 text-[12px]" style={{ color: "var(--muted)" }}>
+              Browse to the chapter you&apos;re on below and tap{" "}
+              <span style={{ color: "var(--ember-soft)" }}>Mark read</span> to
+              reveal its art and discussion — and everything before it.
+            </p>
+          </>
+        )}
+      </div>
 
-      {/* Always-on search across the art you've unlocked. */}
+      {/* Always-on search across the art you've unlocked, with two opt-in pills
+          to reveal the full unlocked grid and/or the locked teasers. */}
       <div className="mb-2">
         <div
           className="flex h-10 items-center gap-2 rounded-[var(--radius-sm)] px-3"
@@ -336,41 +326,33 @@ export function ChapterSection({
             style={{ color: "var(--silver-bright)" }}
           />
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2">
-          <label
-            className="flex cursor-pointer items-center gap-2 text-[12.5px]"
-            style={{ color: "var(--silver)" }}
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowUnlocked((v) => !v)}
+            aria-pressed={showUnlocked}
+            className={pillBase}
+            style={showUnlocked ? pillOn : pillOff}
           >
-            <input
-              type="checkbox"
-              checked={showUnlocked}
-              onChange={(e) => setShowUnlocked(e.target.checked)}
-              className="h-4 w-4 accent-[var(--ember)]"
-            />
-            Show all unlocked art
+            {showUnlocked ? <CheckIcon size={13} /> : null}
+            All unlocked art
             {allReadArt.length > 0 ? (
-              <span style={{ color: "var(--muted)" }}>
-                ({allReadArt.length})
-              </span>
+              <span style={{ opacity: 0.8 }}>· {allReadArt.length}</span>
             ) : null}
-          </label>
-          <label
-            className="flex cursor-pointer items-center gap-2 text-[12.5px]"
-            style={{ color: "var(--silver)" }}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowHidden((v) => !v)}
+            aria-pressed={showHidden}
+            className={pillBase}
+            style={showHidden ? pillOn : pillOff}
           >
-            <input
-              type="checkbox"
-              checked={showHidden}
-              onChange={(e) => setShowHidden(e.target.checked)}
-              className="h-4 w-4 accent-[var(--ember)]"
-            />
-            Show all hidden art
+            {showHidden ? <CheckIcon size={13} /> : <LockIcon size={12} />}
+            Hidden art
             {lockedCount > 0 ? (
-              <span style={{ color: "var(--muted)" }}>
-                ({lockedCount} locked)
-              </span>
+              <span style={{ opacity: 0.8 }}>· {lockedCount} locked</span>
             ) : null}
-          </label>
+          </button>
         </div>
       </div>
 
@@ -384,7 +366,7 @@ export function ChapterSection({
               ? "No unlocked art matches your search."
               : readThrough > 0
                 ? "No art in the chapters you've unlocked yet."
-                : "Set the chapter you're on to start revealing art."}
+                : "Mark a chapter read below to start revealing art."}
           </p>
         )
       ) : null}
@@ -414,9 +396,10 @@ export function ChapterSection({
         </div>
       ) : null}
 
-      {/* Browse a single chapter's art + discussion. */}
+      {/* The single chapter control: a browser you step through to view any
+          chapter. Looking here never changes your spoiler line. */}
       <div
-        className="mt-7 mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[var(--radius-sm)] px-3 py-2.5"
+        className="mt-7 mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[var(--radius-sm)] px-3 py-2.5"
         style={{ border: "1px solid var(--line)", background: "var(--obsidian-2)" }}
       >
         <div className="flex items-center gap-2">
@@ -479,7 +462,8 @@ export function ChapterSection({
         </div>
       </div>
 
-      {/* Focused single-chapter view. */}
+      {/* Focused single-chapter view. The Mark-read button here is how you set
+          your place — jump to any chapter above, then mark it read. */}
       <div
         className="rounded-[var(--radius-sm)] p-3.5"
         style={{
@@ -594,8 +578,11 @@ export function ChapterSection({
           <div className="mt-3 flex items-center gap-2 text-[13px]" style={{ color: "var(--muted)" }}>
             <LockIcon />
             <span>
-              You haven&apos;t read this far yet. Mark it read to unlock its art
-              and discussion.
+              You haven&apos;t read this far yet. Tap{" "}
+              <span style={{ color: "var(--ember-soft)" }}>
+                Mark ch. {focused.number} read
+              </span>{" "}
+              above to unlock its art and discussion.
             </span>
           </div>
         )}
