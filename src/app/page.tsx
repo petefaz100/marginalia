@@ -162,6 +162,19 @@ function ArtPlaceholder({ locked, hue }: { locked?: boolean; hue: string }) {
   );
 }
 
+// A real piece of art in the preview grid (vs. the abstract placeholders).
+function ArtImage({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div
+      className="relative aspect-square overflow-hidden rounded-[10px]"
+      style={{ border: "1px solid var(--line-2)" }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={alt} className="h-full w-full object-cover" />
+    </div>
+  );
+}
+
 export default function Home() {
   const faqJsonLd = {
     "@context": "https://schema.org",
@@ -209,29 +222,33 @@ export default function Home() {
             <CtaPair className="mt-7" />
           </div>
 
-          {/* Preview card: one book, a couple unlocked pieces, the rest locked */}
-          <div
-            className="rounded-[var(--radius)] p-4"
+          {/* Preview card: one book, a couple unlocked pieces, the rest locked.
+              The whole card links out to the featured artist's Instagram. */}
+          <a
+            href="https://www.instagram.com/madschofield/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block rounded-[var(--radius)] p-4 transition-transform hover:-translate-y-0.5"
             style={{
               border: "1px solid var(--line)",
               background: "rgba(27,25,37,.7)",
               boxShadow: "var(--shadow)",
             }}
           >
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
                 <p
-                  className="font-display text-[16px] font-medium"
+                  className="truncate font-display text-[16px] font-medium"
                   style={{ color: "var(--silver-bright)" }}
                 >
-                  Example Book
+                  A Court of Thorns and Roses
                 </p>
                 <p className="text-[12px]" style={{ color: "var(--muted)" }}>
-                  You&apos;ve read through chapter 6
+                  by Sarah J. Maas
                 </p>
               </div>
               <span
-                className="rounded-full px-2.5 py-1 text-[10.5px] font-semibold tracking-wide uppercase"
+                className="shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-semibold tracking-wide uppercase"
                 style={{
                   background: "rgba(154,127,208,.16)",
                   color: "var(--violet-soft)",
@@ -243,9 +260,9 @@ export default function Home() {
             </div>
 
             <div className="mt-4 grid grid-cols-3 gap-2.5">
-              <ArtPlaceholder hue="rgba(224,104,63,.55)" />
-              <ArtPlaceholder hue="rgba(154,127,208,.5)" />
-              <ArtPlaceholder hue="rgba(111,143,201,.5)" />
+              <ArtImage src="/preview/acotar-1.jpg" alt="Character portrait" />
+              <ArtImage src="/preview/acotar-2.jpg" alt="Character portrait" />
+              <ArtImage src="/preview/acotar-3.jpg" alt="Character portrait" />
               <ArtPlaceholder locked hue="" />
               <ArtPlaceholder locked hue="" />
               <ArtPlaceholder locked hue="" />
@@ -256,7 +273,11 @@ export default function Home() {
               </span>
               <span style={{ color: "var(--muted)" }}>Ch. 7+ · locked</span>
             </div>
-          </div>
+            <p className="mt-2 text-[11px]" style={{ color: "var(--muted)" }}>
+              Featured character art by{" "}
+              <span style={{ color: "var(--ember-soft)" }}>@madschofield</span>
+            </p>
+          </a>
         </section>
 
         {/* ---------------- How the gate works ---------------- */}
