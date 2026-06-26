@@ -17,6 +17,15 @@ function gradientFor(label: string) {
   return AVATAR_GRADIENTS[initial.charCodeAt(0) % AVATAR_GRADIENTS.length];
 }
 
+function BookIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  );
+}
+
 function InboxIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -104,22 +113,37 @@ export function HeaderNav({
 }: Props) {
   const [open, setOpen] = useState(false);
 
-  // Signed-out: just a Sign in button, no menu needed at any size.
+  // Signed-out: Library + Sign in, inline at every size (no menu to collapse).
   if (!signedIn) {
     return (
-      <form action={signInWithGoogle}>
-        <button
-          type="submit"
-          className="flex h-10 items-center gap-2 rounded-full px-3.5 text-[13px] font-semibold"
+      <div className="flex items-center gap-2">
+        <Link
+          href="/library"
+          className="flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold"
           style={{
             border: "1px solid var(--line)",
             background: "var(--obsidian-2)",
             color: "var(--silver)",
           }}
+          title="Library"
         >
-          Sign in
-        </button>
-      </form>
+          <BookIcon size={16} />
+          Library
+        </Link>
+        <form action={signInWithGoogle}>
+          <button
+            type="submit"
+            className="flex h-10 items-center gap-2 rounded-full px-3.5 text-[13px] font-semibold"
+            style={{
+              border: "1px solid var(--line)",
+              background: "var(--obsidian-2)",
+              color: "var(--silver)",
+            }}
+          >
+            Sign in
+          </button>
+        </form>
+      </div>
     );
   }
 
@@ -130,6 +154,19 @@ export function HeaderNav({
     <>
       {/* Desktop: inline controls */}
       <div className="hidden items-center gap-2 md:flex">
+        <Link
+          href="/library"
+          className="flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold"
+          style={{
+            border: "1px solid var(--line)",
+            background: "var(--obsidian-2)",
+            color: "var(--silver)",
+          }}
+          title="Library"
+        >
+          <BookIcon size={16} />
+          Library
+        </Link>
         <Link
           href="/inbox"
           className="relative grid h-10 w-10 place-items-center rounded-[13px]"
@@ -274,6 +311,12 @@ export function HeaderNav({
 
               <div className="my-1 h-px" style={{ background: "var(--line)" }} />
 
+              <MenuLink
+                href="/library"
+                label="Library"
+                onClick={() => setOpen(false)}
+                icon={<BookIcon />}
+              />
               <MenuLink
                 href="/inbox"
                 label="Inbox"
