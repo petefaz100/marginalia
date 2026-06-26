@@ -22,12 +22,16 @@ const splineMono = Spline_Sans_Mono({
 });
 
 export const metadata: Metadata = {
+  // Absolute base for social-share image URLs (opengraph-image / twitter-image).
+  // Without this, link previews would point at localhost/the Vercel preview URL
+  // instead of the live domain.
+  metadataBase: new URL("https://www.marginaliaart.com"),
   title: {
     default: "marginalia",
     template: "%s · marginalia",
   },
   description:
-    "A spoiler-safe reading companion — share fan art chapter by chapter, with everything past your current chapter kept hidden until you mark it read.",
+    "A spoiler-safe reading companion — share book art chapter by chapter, with everything past your current chapter kept hidden until you mark it read.",
 };
 
 export default function RootLayout({

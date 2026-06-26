@@ -12,6 +12,9 @@ export type NotificationKind =
 
 export type VoteTarget = "thread" | "comment";
 
+// Who an applicant says they are, on the "apply to be a mod" form.
+export type ModApplicantRole = "book_artist" | "artist_or_author" | "reader";
+
 export type Database = {
   public: {
     Tables: {
@@ -182,6 +185,36 @@ export type Database = {
           artwork_id?: string;
           reported_by?: string | null;
           reason?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      mod_applications: {
+        Row: {
+          id: string;
+          name: string;
+          email: string;
+          role: ModApplicantRole;
+          reason: string;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          email: string;
+          role: ModApplicantRole;
+          reason: string;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          email?: string;
+          role?: ModApplicantRole;
+          reason?: string;
+          created_by?: string | null;
           created_at?: string;
         };
         Relationships: [];

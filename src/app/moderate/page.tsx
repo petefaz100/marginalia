@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SiteHeader } from "../_components/site-header";
 import { ModerationQueue, type QueueItem } from "./queue";
 import { ReportedQueue, type ReportItem } from "./reported";
+import { ApplicationsQueue, type ApplicationItem } from "./applications";
 
 export const metadata = { title: "Moderation" };
 
@@ -34,6 +35,20 @@ export default async function ModeratePage() {
     .select("id, artwork_id, reported_by, reason, created_at")
     .order("created_at", { ascending: true });
   const reports = reportRows ?? [];
+
+  // "Become a mod" applications from the public /apply form (mods only, per RLS).
+  const { data: applicationRows } = await supabase
+    .from("mod_applications")
+    .select("id, name, email, role, reason, created_at")
+    .order("created_at", { ascending: true });
+  const applications: ApplicationItem[] = (applicationRows ?? []).map((a) => ({
+    id: a.id,
+    name: a.name,
+    email: a.email,
+    role: a.role,
+    reason: a.reason,
+    createdAt: a.created_at,
+  }));
 
   // Pull the reported artworks' details in one lookup.
   const reportedArtIds = [...new Set(reports.map((r) => r.artwork_id))];
@@ -198,6 +213,24 @@ export default async function ModeratePage() {
                 } from readers. Remove the art or dismiss the report.`}
           </p>
           <ReportedQueue items={reported} />
+        </section>
+
+        {/* Mod applications */}
+        <section className="mt-10">
+          <h2
+            className="font-display text-[20px] leading-tight font-medium"
+            style={{ color: "var(--silver-bright)" }}
+          >
+            Mod applications
+          </h2>
+          <p className="mt-1 mb-5 text-[13px]" style={{ color: "var(--muted)" }}>
+            {applications.length === 0
+              ? "No applications waiting."
+              : `${applications.length} ${
+                  applications.length === 1 ? "person wants" : "people want"
+                } to help curate. Reach out by email, then mark it handled.`}
+          </p>
+          <ApplicationsQueue items={applications} />
         </section>
 
         <Link

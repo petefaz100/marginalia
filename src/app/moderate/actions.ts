@@ -99,3 +99,26 @@ export async function dismissReport(reportId: string) {
 
   revalidatePath("/moderate");
 }
+
+// Clears a "become a mod" application off the queue once a mod has handled it
+// (reached out, or decided to pass). RLS lets only mods delete applications.
+export async function dismissApplication(applicationId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("You must be signed in.");
+
+  const { data: isMod } = await supabase.rpc("is_mod");
+  if (!isMod) throw new Error("Mods only.");
+
+  if (!applicationId) throw new Error("Missing application.");
+
+  const { error } = await supabase
+    .from("mod_applications")
+    .delete()
+    .eq("id", applicationId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/moderate");
+}

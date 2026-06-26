@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SiteHeader } from "./_components/site-header";
 
 export const metadata = {
-  title: "marginalia — fan art without spoilers",
+  title: "marginalia — book art without spoilers",
   description:
     "Explore chapter-safe art, character visuals, discussions, and recaps that unlock only as far as you've read.",
 };
@@ -57,7 +57,7 @@ function SecondaryCta({
 function CtaPair({ className = "" }: { className?: string }) {
   return (
     <div className={`flex flex-wrap gap-3 ${className}`}>
-      <PrimaryCta href="#curate">apply to be a mod</PrimaryCta>
+      <PrimaryCta href="/apply">apply to be a mod</PrimaryCta>
       <SecondaryCta href="/library">browse books</SecondaryCta>
     </div>
   );
@@ -155,7 +155,7 @@ export default function Home() {
               className="mt-4 font-display text-[40px] leading-[1.05] font-medium sm:text-[52px]"
               style={{ color: "var(--silver-bright)" }}
             >
-              fan art{" "}
+              book art{" "}
               <span style={{ color: "var(--ember)" }}>without</span> spoilers.
             </h1>
             <p
@@ -190,7 +190,7 @@ export default function Home() {
                   className="font-display text-[16px] font-medium"
                   style={{ color: "var(--silver-bright)" }}
                 >
-                  The Shattered Sea
+                  Example Book
                 </p>
                 <p className="text-[12px]" style={{ color: "var(--muted)" }}>
                   You&apos;ve read through chapter 6

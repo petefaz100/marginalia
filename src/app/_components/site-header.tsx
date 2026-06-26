@@ -20,25 +20,19 @@ function NeedsUsernamePill() {
 }
 
 function LeafMark() {
+  // The marginalia brand mark: a bookmark with a sparkle, paired with a padlock
+  // inside a dashed frame — the "spoiler-gated" idea in one glyph. Served as a
+  // transparent PNG so it sits cleanly on the dark header.
   return (
-    <svg
-      width="30"
-      height="42"
-      viewBox="0 0 40 56"
-      fill="none"
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/marginalia-mark.png"
+      alt=""
+      width={32}
+      height={31}
+      className="h-8 w-auto"
       style={{ filter: "drop-shadow(0 0 10px rgba(159,182,224,.35))" }}
-    >
-      <defs>
-        <linearGradient id="leaf" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#dfe6f2" />
-          <stop offset="1" stopColor="#6f8fc9" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M20 4c2 8-4 11-4 18 0 4 2 6 2 9-3-1-5-4-5-8-4 4-6 9-6 14 0 8 6 14 13 14s13-6 13-14c0-9-7-12-9-21-1-4 1-7 1-12-3 2-5 5-5 9 0 0-1-9 5-19z"
-        fill="url(#leaf)"
-      />
-    </svg>
+    />
   );
 }
 
@@ -222,20 +216,6 @@ export async function SiteHeader() {
           style={{ color: "var(--silver)" }}
         >
           Library
-        </Link>
-        <Link
-          href="/#how"
-          className="text-[13.5px] font-semibold transition-colors hover:text-[var(--silver-bright)]"
-          style={{ color: "var(--silver)" }}
-        >
-          How it works
-        </Link>
-        <Link
-          href="/#curate"
-          className="text-[13.5px] font-semibold transition-colors hover:text-[var(--silver-bright)]"
-          style={{ color: "var(--silver)" }}
-        >
-          Apply to be a mod
         </Link>
       </nav>
 
