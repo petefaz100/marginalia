@@ -192,8 +192,7 @@ export async function SiteHeader() {
       className="sticky top-0 z-40 flex items-center justify-between gap-3"
       style={{
         padding: "16px 0 12px",
-        background:
-          "linear-gradient(180deg, var(--obsidian) 62%, rgba(19,17,25,0))",
+        background: "var(--obsidian)",
       }}
     >
       <Link href="/" className="flex min-w-0 items-center gap-2.5">

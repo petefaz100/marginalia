@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SiteHeader } from "./_components/site-header";
+import { signInWithGoogle } from "./auth/actions";
 
 export const metadata = {
   title: "marginalia — a community home for book art, without spoilers",
@@ -61,25 +62,25 @@ function PrimaryCta({
   );
 }
 
-function SecondaryCta({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}) {
+const secondaryCtaClass =
+  "inline-flex h-12 items-center justify-center rounded-full px-6 text-[14px] font-semibold transition-colors";
+const secondaryCtaStyle = {
+  border: "1px solid var(--line-2)",
+  background: "rgba(27,25,37,.6)",
+  color: "var(--silver-bright)",
+} as const;
+
+// "Sign up" kicks off Google sign-in. It's a server action, so it must post
+// from a <form> rather than navigate via a <Link>; styled to match the
+// secondary CTA so the pair reads as one set of buttons.
+function SignUpCta() {
   return (
-    <Link
-      href={href}
-      className="inline-flex h-12 items-center justify-center rounded-full px-6 text-[14px] font-semibold transition-colors"
-      style={{
-        border: "1px solid var(--line-2)",
-        background: "rgba(27,25,37,.6)",
-        color: "var(--silver-bright)",
-      }}
-    >
-      {children}
-    </Link>
+    <form action={signInWithGoogle}>
+      <input type="hidden" name="next" value="/account" />
+      <button type="submit" className={secondaryCtaClass} style={secondaryCtaStyle}>
+        Sign up
+      </button>
+    </form>
   );
 }
 
@@ -87,7 +88,7 @@ function CtaPair({ className = "" }: { className?: string }) {
   return (
     <div className={`flex flex-wrap gap-3 ${className}`}>
       <PrimaryCta href="/library">Browse Books</PrimaryCta>
-      <SecondaryCta href="/apply">Apply to be a Mod</SecondaryCta>
+      <SignUpCta />
     </div>
   );
 }
