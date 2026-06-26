@@ -86,11 +86,13 @@ $$;
 --    Submitting an application stays open to anyone (that policy is untouched).
 -- ---------------------------------------------------------------------------
 drop policy if exists "mods can read mod applications" on public.mod_applications;
+drop policy if exists "admin can read mod applications" on public.mod_applications;
 create policy "admin can read mod applications"
   on public.mod_applications for select
   using (public.is_admin());
 
 drop policy if exists "mods can delete mod applications" on public.mod_applications;
+drop policy if exists "admin can delete mod applications" on public.mod_applications;
 create policy "admin can delete mod applications"
   on public.mod_applications for delete
   using (public.is_admin());
