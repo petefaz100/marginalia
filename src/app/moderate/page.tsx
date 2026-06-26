@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SiteHeader } from "../_components/site-header";
-import { approveArt, rejectArt } from "./actions";
+import { ModerationQueue, type QueueItem } from "./queue";
 
 export const metadata = { title: "Moderation" };
 
@@ -21,19 +21,22 @@ export default async function ModeratePage() {
   const { data: pendingRows } = await supabase
     .from("artworks")
     .select(
-      "id, book_id, chapter_id, image_url, title, artist_handle, credit_url, created_at",
+      "id, book_id, chapter_id, image_url, title, artist_handle, credit_url, uploaded_by, created_at",
     )
     .eq("status", "pending")
     .order("created_at", { ascending: true });
   const pending = pendingRows ?? [];
 
-  // Resolve book titles and chapter numbers in two batched lookups rather than
-  // relying on typed nested joins.
+  // Resolve book titles, chapter labels, and uploader names in batched lookups.
   const bookIds = [...new Set(pending.map((a) => a.book_id))];
   const chapterIds = [...new Set(pending.map((a) => a.chapter_id))];
+  const uploaderIds = [
+    ...new Set(pending.map((a) => a.uploaded_by).filter(Boolean) as string[]),
+  ];
 
   const bookTitle = new Map<string, string>();
   const chapterLabel = new Map<string, string>();
+  const uploaderName = new Map<string, string>();
 
   if (bookIds.length > 0) {
     const { data: books } = await supabase
@@ -54,6 +57,29 @@ export default async function ModeratePage() {
       );
     }
   }
+  if (uploaderIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, handle, display_name")
+      .in("id", uploaderIds);
+    for (const p of profiles ?? []) {
+      uploaderName.set(p.id, p.display_name || p.handle || "a reader");
+    }
+  }
+
+  const items: QueueItem[] = pending.map((a) => ({
+    id: a.id,
+    bookId: a.book_id,
+    imageUrl: a.image_url,
+    title: a.title,
+    artistHandle: a.artist_handle,
+    creditUrl: a.credit_url,
+    bookTitle: bookTitle.get(a.book_id) ?? "Unknown book",
+    chapterLabel: chapterLabel.get(a.chapter_id) ?? "Unknown chapter",
+    uploader: a.uploaded_by
+      ? (uploaderName.get(a.uploaded_by) ?? "a reader")
+      : "a reader",
+  }));
 
   return (
     <div
@@ -79,97 +105,14 @@ export default async function ModeratePage() {
           Pending art
         </h1>
         <p className="mt-1 mb-6 text-[13px]" style={{ color: "var(--muted)" }}>
-          {pending.length === 0
+          {items.length === 0
             ? "Nothing waiting — the queue is clear."
-            : `${pending.length} ${
-                pending.length === 1 ? "piece" : "pieces"
-              } awaiting review.`}
+            : `${items.length} ${
+                items.length === 1 ? "piece" : "pieces"
+              } awaiting review. Select several to approve or reject at once.`}
         </p>
 
-        <ul className="flex flex-col gap-4">
-          {pending.map((art) => (
-            <li
-              key={art.id}
-              className="overflow-hidden rounded-[var(--radius-sm)]"
-              style={{
-                border: "1px solid var(--line)",
-                background: "var(--obsidian-2)",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={art.image_url}
-                alt={art.title ?? "Submitted art"}
-                className="max-h-[420px] w-full object-contain"
-                style={{ background: "var(--obsidian-3)" }}
-              />
-              <div className="p-3.5">
-                <p
-                  className="text-[14px] font-semibold"
-                  style={{ color: "var(--silver-bright)" }}
-                >
-                  {art.title || "Untitled"}
-                </p>
-                <p
-                  className="mt-0.5 text-[12.5px]"
-                  style={{ color: "var(--muted)" }}
-                >
-                  {bookTitle.get(art.book_id) ?? "Unknown book"}
-                  {" · "}
-                  {chapterLabel.get(art.chapter_id) ?? "Unknown chapter"}
-                </p>
-                {art.artist_handle ? (
-                  <p
-                    className="mt-0.5 text-[12.5px]"
-                    style={{ color: "var(--muted)" }}
-                  >
-                    Artist: {art.artist_handle}
-                  </p>
-                ) : null}
-                {art.credit_url ? (
-                  <a
-                    href={art.credit_url}
-                    target="_blank"
-                    rel="noopener noreferrer nofollow"
-                    className="mt-0.5 inline-block text-[12.5px] underline"
-                    style={{ color: "var(--ember-soft)" }}
-                  >
-                    Source link
-                  </a>
-                ) : null}
-
-                <div className="mt-3 flex gap-2">
-                  <form action={approveArt}>
-                    <input type="hidden" name="artworkId" value={art.id} />
-                    <input type="hidden" name="bookId" value={art.book_id} />
-                    <button
-                      type="submit"
-                      className="h-9 rounded-full px-4 text-[12.5px] font-semibold"
-                      style={{ background: "var(--ember)", color: "#fff" }}
-                    >
-                      Approve
-                    </button>
-                  </form>
-                  <form action={rejectArt}>
-                    <input type="hidden" name="artworkId" value={art.id} />
-                    <input type="hidden" name="bookId" value={art.book_id} />
-                    <button
-                      type="submit"
-                      className="h-9 rounded-full px-4 text-[12.5px] font-semibold"
-                      style={{
-                        border: "1px solid var(--line-2)",
-                        background: "var(--obsidian-3)",
-                        color: "var(--wine-soft)",
-                      }}
-                    >
-                      Reject
-                    </button>
-                  </form>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <ModerationQueue items={items} />
 
         <Link
           href="/"

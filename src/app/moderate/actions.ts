@@ -3,13 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-// Mods flip a pending piece to approved (it becomes visible to readers past its
-// chapter) or rejected (hidden from everyone but the uploader). RLS already
-// restricts these updates to mods; we re-check here to fail with a clear
-// message instead of a silent no-op if a non-mod somehow reaches the action.
-async function setArtStatus(
-  formData: FormData,
+// Mods flip pending pieces to approved (visible to readers past the chapter) or
+// rejected (hidden from everyone but the uploader). Works on one id or many, so
+// the queue can approve/reject in bulk. RLS already restricts these updates to
+// mods; we re-check here to fail with a clear message rather than a silent
+// no-op if a non-mod somehow reaches the action.
+export async function moderateArt(
+  artworkIds: string[],
   status: "approved" | "rejected",
+  bookIds: string[] = [],
 ) {
   const supabase = await createClient();
   const {
@@ -20,24 +22,17 @@ async function setArtStatus(
   const { data: isMod } = await supabase.rpc("is_mod");
   if (!isMod) throw new Error("Mods only.");
 
-  const artworkId = String(formData.get("artworkId") ?? "").trim();
-  const bookId = String(formData.get("bookId") ?? "").trim();
-  if (!artworkId) throw new Error("Missing artwork.");
+  const ids = artworkIds.filter(Boolean);
+  if (ids.length === 0) throw new Error("Nothing selected.");
 
   const { error } = await supabase
     .from("artworks")
     .update({ status })
-    .eq("id", artworkId);
+    .in("id", ids);
   if (error) throw new Error(error.message);
 
   revalidatePath("/moderate");
-  if (bookId) revalidatePath(`/books/${bookId}`);
-}
-
-export async function approveArt(formData: FormData) {
-  await setArtStatus(formData, "approved");
-}
-
-export async function rejectArt(formData: FormData) {
-  await setArtStatus(formData, "rejected");
+  for (const bookId of new Set(bookIds.filter(Boolean))) {
+    revalidatePath(`/books/${bookId}`);
+  }
 }

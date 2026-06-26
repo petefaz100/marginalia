@@ -1,9 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { submitArt } from "../books/actions";
 
 type ChapterOption = { id: string; number: number; title: string | null };
+
+type SubmitState = { status: "idle" | "ok" | "error"; error?: string };
 
 // Art submission form: pick a chapter (its spoiler level), choose an image,
 // add optional credit. Lives on the book page for signed-in readers. Uploads
@@ -15,23 +17,67 @@ export function ArtUpload({
   bookId: string;
   chapters: ChapterOption[];
 }) {
+  const formRef = useRef<HTMLFormElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
 
-  const [error, formAction, pending] = useActionState<string | null, FormData>(
+  const [state, formAction, pending] = useActionState<SubmitState, FormData>(
     async (_prev, formData) => {
       try {
         await submitArt(formData);
-        return null;
+        return { status: "ok" };
       } catch (e) {
-        return e instanceof Error ? e.message : "Something went wrong.";
+        return {
+          status: "error",
+          error: e instanceof Error ? e.message : "Something went wrong.",
+        };
       }
     },
-    null,
+    { status: "idle" },
   );
+
+  // After a successful submission, show a confirmation panel instead of the
+  // form so the reader gets clear feedback their piece is in the queue.
+  if (state.status === "ok") {
+    return (
+      <div
+        className="mt-4 flex flex-col items-start gap-2 rounded-[var(--radius-sm)] p-3.5"
+        style={{
+          border: "1px solid var(--line)",
+          background: "var(--obsidian-2)",
+        }}
+      >
+        <p
+          className="text-[11px] tracking-wide uppercase"
+          style={{ color: "var(--ember-soft)" }}
+        >
+          ✓ Submitted
+        </p>
+        <p className="text-[13px]" style={{ color: "var(--silver)" }}>
+          Thanks — your art is in the moderation queue. It&apos;ll appear here
+          once a moderator approves it.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            formRef.current?.reset();
+            setPreview(null);
+            setFileName(null);
+            // Reload to reset the action state back to idle and show the form.
+            window.location.reload();
+          }}
+          className="mt-1 text-[12.5px] font-semibold"
+          style={{ color: "var(--ember-soft)" }}
+        >
+          Submit another piece
+        </button>
+      </div>
+    );
+  }
 
   return (
     <form
+      ref={formRef}
       action={formAction}
       className="mt-4 flex flex-col gap-3 rounded-[var(--radius-sm)] p-3.5"
       style={{
@@ -154,9 +200,9 @@ export function ArtUpload({
         }}
       />
 
-      {error ? (
+      {state.status === "error" && state.error ? (
         <p className="text-[12.5px]" style={{ color: "var(--wine-soft)" }}>
-          {error}
+          {state.error}
         </p>
       ) : null}
 
