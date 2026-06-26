@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { setReadThrough } from "../actions";
 import { ArtGallery, type GalleryArt } from "../../_components/art-gallery";
+import { ArtCarousel } from "../../_components/art-carousel";
+import { ChapterTalk, type ChapterComment } from "./chapter-talk";
 
 type Chapter = { id: string; number: number; title: string | null };
 
@@ -24,32 +26,296 @@ function LockIcon() {
   );
 }
 
-// The chapters area of a book page. Three controls sit on top:
-//   • Progress selector — set how far you've read; everything at or below that
-//     chapter unlocks. Always visible, so it works in either view below.
-//   • Search — filter unlocked art by title or artist (spoiler-safe: it never
-//     reaches art from chapters you haven't read).
-//   • View toggle — Chapter View (art grouped under each chapter, with a
-//     far-left mark-read control) or Gallery View (every unlocked piece in one
-//     grid). Rejected art is deleted server-side, so it never appears here.
+function FrameIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="M21 15l-5-5L5 21" />
+    </svg>
+  );
+}
+
+function GridIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
+      <rect x="14" y="14" width="7" height="7" />
+    </svg>
+  );
+}
+
+function TalkIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.6-.8L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5A8.38 8.38 0 0 1 21 11.5z" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{
+        transform: open ? "rotate(180deg)" : "none",
+        transition: "transform .15s",
+      }}
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+type TabKey = "art" | "gallery" | "talk";
+
+// One chapter card. Unlocked chapters expand to show three tabs — art (inline
+// carousel), gallery (thumbnail grid), and talk (the per-chapter comment
+// stream). Locked chapters are dimmed and can't be opened.
+function ChapterCard({
+  bookId,
+  chapter,
+  unlocked,
+  art,
+  comments,
+  signedIn,
+  hasUsername,
+  isMod,
+  defaultOpen,
+}: {
+  bookId: string;
+  chapter: Chapter;
+  unlocked: boolean;
+  art: GalleryArt[];
+  comments: ChapterComment[];
+  signedIn: boolean;
+  hasUsername: boolean;
+  isMod: boolean;
+  defaultOpen: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen && unlocked);
+  // Open to "art" when there's art to show, otherwise straight to "talk".
+  const [tab, setTab] = useState<TabKey>(art.length > 0 ? "art" : "talk");
+
+  const artCount = art.length;
+  const commentCount = comments.length;
+
+  return (
+    <div
+      className="rounded-[var(--radius-sm)] p-3.5"
+      style={{
+        border: "1px solid var(--line)",
+        background: "var(--obsidian-2)",
+        opacity: unlocked ? 1 : 0.7,
+      }}
+    >
+      <div className="flex items-center gap-3">
+        {/* Mark-read pill — toggles your reading position at this chapter. */}
+        {signedIn ? (
+          <form action={setReadThrough} className="shrink-0">
+            <input type="hidden" name="bookId" value={bookId} />
+            <input
+              type="hidden"
+              name="through"
+              value={unlocked ? chapter.number - 1 : chapter.number}
+            />
+            <button
+              type="submit"
+              aria-label={
+                unlocked
+                  ? `Mark chapter ${chapter.number} unread`
+                  : `Mark chapter ${chapter.number} read`
+              }
+              title={unlocked ? "Mark unread" : "Mark this read"}
+              className="flex h-8 items-center gap-1 rounded-full px-2.5 text-[12px] font-semibold"
+              style={
+                unlocked
+                  ? { background: "var(--ember)", color: "#fff" }
+                  : {
+                      border: "1px solid var(--line-2)",
+                      background: "var(--obsidian-3)",
+                      color: "var(--muted)",
+                    }
+              }
+            >
+              {unlocked ? "✓ read" : "mark read"}
+            </button>
+          </form>
+        ) : null}
+
+        <span
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-full font-mono text-[12px] font-semibold"
+          style={{
+            border: "1px solid var(--line-2)",
+            background: "var(--obsidian-3)",
+            color: unlocked ? "var(--ember-soft)" : "var(--muted-2)",
+          }}
+        >
+          {chapter.number}
+        </span>
+
+        {/* Title — clicking it toggles the chapter open (unlocked only). */}
+        <button
+          type="button"
+          onClick={() => unlocked && setOpen((o) => !o)}
+          disabled={!unlocked}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+        >
+          <span
+            className="min-w-0 flex-1 truncate text-[14px] font-semibold"
+            style={{ color: "var(--silver-bright)" }}
+          >
+            {chapter.title || `Chapter ${chapter.number}`}
+          </span>
+          {unlocked ? (
+            <ChevronIcon open={open} />
+          ) : (
+            <span
+              className="flex shrink-0 items-center gap-1.5 text-[12px]"
+              style={{ color: "var(--muted-2)" }}
+            >
+              <LockIcon />
+              Locked
+            </span>
+          )}
+        </button>
+      </div>
+
+      {unlocked && open ? (
+        <>
+          {/* Tabs: art / gallery / talk */}
+          <div className="mt-3 flex gap-2">
+            {(
+              [
+                ["art", "Art", <FrameIcon key="f" />],
+                ["gallery", "Gallery", <GridIcon key="g" />],
+                ["talk", "Talk", <TalkIcon key="t" />],
+              ] as const
+            ).map(([key, label, icon]) => {
+              const active = tab === key;
+              const badge =
+                key === "talk"
+                  ? commentCount
+                  : key === "art" || key === "gallery"
+                    ? artCount
+                    : 0;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setTab(key)}
+                  className="flex h-8 items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold"
+                  style={
+                    active
+                      ? { background: "var(--ember)", color: "#fff" }
+                      : {
+                          border: "1px solid var(--line)",
+                          background: "var(--obsidian-3)",
+                          color: "var(--silver)",
+                        }
+                  }
+                >
+                  {icon}
+                  {label}
+                  {badge > 0 ? (
+                    <span style={{ opacity: 0.8 }}>· {badge}</span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+
+          {tab === "art" ? (
+            artCount > 0 ? (
+              <ArtCarousel art={art} bookId={bookId} isMod={isMod} />
+            ) : (
+              <p className="mt-3 text-[13px]" style={{ color: "var(--muted)" }}>
+                No art yet for this chapter.
+              </p>
+            )
+          ) : tab === "gallery" ? (
+            artCount > 0 ? (
+              <ArtGallery art={art} bookId={bookId} isMod={isMod} />
+            ) : (
+              <p className="mt-3 text-[13px]" style={{ color: "var(--muted)" }}>
+                No art yet for this chapter.
+              </p>
+            )
+          ) : (
+            <ChapterTalk
+              bookId={bookId}
+              chapterId={chapter.id}
+              chapterNumber={chapter.number}
+              comments={comments}
+              signedIn={signedIn}
+              hasUsername={hasUsername}
+            />
+          )}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+// The chapters area of a book page. A read-through selector sits on top; below
+// it every chapter is a card. Unlocked chapters open to art/gallery/talk tabs;
+// chapters past your place stay locked behind the spoiler divider. The gate is
+// enforced server-side too (RLS), so this is presentation only.
 export function ChapterSection({
   bookId,
   chapters,
   readThrough,
   artByChapter,
+  commentsByChapter,
   signedIn,
+  hasUsername = false,
   isMod = false,
 }: {
   bookId: string;
   chapters: Chapter[];
   readThrough: number;
   artByChapter: Record<string, GalleryArt[]>;
+  commentsByChapter: Record<string, ChapterComment[]>;
   signedIn: boolean;
+  hasUsername?: boolean;
   isMod?: boolean;
 }) {
-  const [view, setView] = useState<"chapter" | "gallery">("chapter");
-  const [query, setQuery] = useState("");
-
   if (chapters.length === 0) {
     return (
       <p className="mb-4 text-[13px]" style={{ color: "var(--muted)" }}>
@@ -59,30 +325,12 @@ export function ChapterSection({
   }
 
   const firstLockedIndex = chapters.findIndex((c) => c.number > readThrough);
-
-  const q = query.trim().toLowerCase();
-  const searching = q !== "";
-  const matches = (p: GalleryArt) =>
-    !searching ||
-    (p.title?.toLowerCase().includes(q) ?? false) ||
-    (p.artist_handle?.toLowerCase().includes(q) ?? false);
-
-  const unlockedChapters = chapters.filter((c) => c.number <= readThrough);
-
-  // Everything the reader is allowed to see, flattened for Gallery View.
-  const unlockedArt: GalleryArt[] = unlockedChapters.flatMap(
-    (c) => artByChapter[c.id] ?? [],
-  );
-  const galleryArt = unlockedArt.filter(matches);
-
-  // Chapters that still have art after the search filter (Chapter View).
-  const matchedChapters = unlockedChapters
-    .map((c) => ({ chapter: c, art: (artByChapter[c.id] ?? []).filter(matches) }))
-    .filter((x) => x.art.length > 0);
+  // Auto-open the chapter at your current place so the page lands on something.
+  const openNumber = readThrough;
 
   return (
     <>
-      {/* Progress selector — works for both views */}
+      {/* Progress selector */}
       {signedIn ? (
         <form
           action={setReadThrough}
@@ -123,225 +371,42 @@ export function ChapterSection({
         </form>
       ) : null}
 
-      {/* Search */}
-      <input
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search this book's art by title or artist…"
-        autoComplete="off"
-        className="mb-3 h-10 w-full rounded-[var(--radius-sm)] px-3 text-[13.5px] outline-none"
-        style={{
-          border: "1px solid var(--line)",
-          background: "var(--obsidian-2)",
-          color: "var(--silver-bright)",
-        }}
-      />
-
-      {/* View toggle */}
-      <div className="mb-3 flex gap-2">
-        {(
-          [
-            ["chapter", "Chapter View"],
-            ["gallery", "Gallery View"],
-          ] as const
-        ).map(([key, label]) => {
-          const active = view === key;
+      <ul className="flex flex-col gap-2.5">
+        {chapters.map((ch, i) => {
+          const unlocked = ch.number <= readThrough;
           return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setView(key)}
-              className="h-8 rounded-full px-3.5 text-[12.5px] font-semibold"
-              style={
-                active
-                  ? { background: "var(--ember)", color: "#fff" }
-                  : {
-                      border: "1px solid var(--line)",
-                      background: "var(--obsidian-2)",
-                      color: "var(--silver)",
-                    }
-              }
-            >
-              {label}
-            </button>
+            <li key={ch.id}>
+              {i === firstLockedIndex ? (
+                <div
+                  className="mb-2.5 flex items-center gap-2 text-[11px] tracking-[.14em] uppercase"
+                  style={{ color: "var(--wine-soft)" }}
+                >
+                  <span
+                    className="h-px flex-1"
+                    style={{ background: "var(--line-2)" }}
+                  />
+                  spoilers beyond here
+                  <span
+                    className="h-px flex-1"
+                    style={{ background: "var(--line-2)" }}
+                  />
+                </div>
+              ) : null}
+              <ChapterCard
+                bookId={bookId}
+                chapter={ch}
+                unlocked={unlocked}
+                art={artByChapter[ch.id] ?? []}
+                comments={commentsByChapter[ch.id] ?? []}
+                signedIn={signedIn}
+                hasUsername={hasUsername}
+                isMod={isMod}
+                defaultOpen={ch.number === openNumber}
+              />
+            </li>
           );
         })}
-      </div>
-
-      {view === "gallery" ? (
-        galleryArt.length > 0 ? (
-          <ArtGallery art={galleryArt} bookId={bookId} isMod={isMod} />
-        ) : (
-          <p className="text-[13px]" style={{ color: "var(--muted)" }}>
-            {searching
-              ? "No unlocked art matches your search."
-              : readThrough > 0
-                ? "No art in the chapters you've unlocked yet."
-                : "Mark a chapter read to start revealing art."}
-          </p>
-        )
-      ) : searching ? (
-        // Chapter View, filtered by search: only chapters with matches.
-        matchedChapters.length > 0 ? (
-          <ul className="flex flex-col gap-2.5">
-            {matchedChapters.map(({ chapter: ch, art }) => (
-              <li key={ch.id}>
-                <div
-                  className="rounded-[var(--radius-sm)] p-3.5"
-                  style={{
-                    border: "1px solid var(--line)",
-                    background: "var(--obsidian-2)",
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full font-mono text-[12px] font-semibold"
-                      style={{
-                        border: "1px solid var(--line-2)",
-                        background: "var(--obsidian-3)",
-                        color: "var(--ember-soft)",
-                      }}
-                    >
-                      {ch.number}
-                    </span>
-                    <span
-                      className="min-w-0 flex-1 truncate text-[14px] font-semibold"
-                      style={{ color: "var(--silver-bright)" }}
-                    >
-                      {ch.title || `Chapter ${ch.number}`}
-                    </span>
-                    <span
-                      className="shrink-0 text-[12px]"
-                      style={{ color: "var(--muted)" }}
-                    >
-                      {art.length} {art.length === 1 ? "match" : "matches"}
-                    </span>
-                  </div>
-                  <ArtGallery art={art} bookId={bookId} isMod={isMod} />
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-[13px]" style={{ color: "var(--muted)" }}>
-            No unlocked art matches your search.
-          </p>
-        )
-      ) : (
-        // Chapter View, full list with mark-read controls + spoiler gate.
-        <ul className="flex flex-col gap-2.5">
-          {chapters.map((ch, i) => {
-            const unlocked = ch.number <= readThrough;
-            const chapterArt = artByChapter[ch.id] ?? [];
-            const count = chapterArt.length;
-            return (
-              <li key={ch.id}>
-                {i === firstLockedIndex ? (
-                  <div
-                    className="mb-2.5 flex items-center gap-2 text-[11px] tracking-[.14em] uppercase"
-                    style={{ color: "var(--wine-soft)" }}
-                  >
-                    <span
-                      className="h-px flex-1"
-                      style={{ background: "var(--line-2)" }}
-                    />
-                    spoilers beyond here
-                    <span
-                      className="h-px flex-1"
-                      style={{ background: "var(--line-2)" }}
-                    />
-                  </div>
-                ) : null}
-                <div
-                  className="rounded-[var(--radius-sm)] p-3.5"
-                  style={{
-                    border: "1px solid var(--line)",
-                    background: "var(--obsidian-2)",
-                    opacity: unlocked ? 1 : 0.7,
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    {/* Far-left mark-read control */}
-                    {signedIn ? (
-                      <form action={setReadThrough} className="shrink-0">
-                        <input type="hidden" name="bookId" value={bookId} />
-                        <input
-                          type="hidden"
-                          name="through"
-                          value={unlocked ? ch.number - 1 : ch.number}
-                        />
-                        <button
-                          type="submit"
-                          aria-label={
-                            unlocked
-                              ? `Mark chapter ${ch.number} unread`
-                              : `Mark chapter ${ch.number} read`
-                          }
-                          title={unlocked ? "Mark unread" : "Mark this read"}
-                          className="grid h-8 w-8 place-items-center rounded-full text-[14px]"
-                          style={
-                            unlocked
-                              ? { background: "var(--ember)", color: "#fff" }
-                              : {
-                                  border: "1px solid var(--line-2)",
-                                  background: "var(--obsidian-3)",
-                                  color: "var(--muted)",
-                                }
-                          }
-                        >
-                          {unlocked ? "✓" : ""}
-                        </button>
-                      </form>
-                    ) : null}
-
-                    <span
-                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full font-mono text-[12px] font-semibold"
-                      style={{
-                        border: "1px solid var(--line-2)",
-                        background: "var(--obsidian-3)",
-                        color: unlocked
-                          ? "var(--ember-soft)"
-                          : "var(--muted-2)",
-                      }}
-                    >
-                      {ch.number}
-                    </span>
-                    <span
-                      className="min-w-0 flex-1 truncate text-[14px] font-semibold"
-                      style={{ color: "var(--silver-bright)" }}
-                    >
-                      {ch.title || `Chapter ${ch.number}`}
-                    </span>
-                    {unlocked ? (
-                      <span
-                        className="shrink-0 text-[12px]"
-                        style={{ color: "var(--muted)" }}
-                      >
-                        {count > 0
-                          ? `${count} ${count === 1 ? "piece" : "pieces"}`
-                          : "No art yet"}
-                      </span>
-                    ) : (
-                      <span
-                        className="flex shrink-0 items-center gap-1.5 text-[12px]"
-                        style={{ color: "var(--muted-2)" }}
-                      >
-                        <LockIcon />
-                        Locked
-                      </span>
-                    )}
-                  </div>
-
-                  {unlocked && count > 0 ? (
-                    <ArtGallery art={chapterArt} bookId={bookId} isMod={isMod} />
-                  ) : null}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      </ul>
     </>
   );
 }

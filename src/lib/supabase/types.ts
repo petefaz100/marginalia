@@ -344,6 +344,10 @@ export type Database = {
         Args: { cid: string };
         Returns: boolean;
       };
+      ensure_chapter_thread: {
+        Args: { cid: string };
+        Returns: string;
+      };
       books_art_counts: {
         Args: Record<string, never>;
         Returns: { book_id: string; art_count: number }[];

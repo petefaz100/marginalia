@@ -6,49 +6,15 @@ import type { VoteTarget } from "@/lib/supabase/types";
 
 type Result = { ok: boolean; message?: string };
 
-// Start a discussion thread anchored to a chapter. The chapter sets the spoiler
-// level: the thread only shows to readers who've reached it. RLS enforces the
-// real rules (must have a username, chapter must be unlocked, author = self);
-// we surface friendly messages here and revalidate the page on success.
-export async function createThread(formData: FormData): Promise<Result> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, message: "You must be signed in." };
-
-  const bookId = String(formData.get("bookId") ?? "").trim();
-  const chapterId = String(formData.get("chapterId") ?? "").trim();
-  const title = String(formData.get("title") ?? "").trim();
-  const body = String(formData.get("body") ?? "").trim();
-  if (!bookId || !chapterId) return { ok: false, message: "Missing chapter." };
-  if (!title) return { ok: false, message: "Give your thread a title." };
-  if (title.length > 140)
-    return { ok: false, message: "Keep the title under 140 characters." };
-
-  const { error } = await supabase.from("threads").insert({
-    book_id: bookId,
-    chapter_id: chapterId,
-    author_id: user.id,
-    title,
-    body: body || null,
-  });
-  if (error) {
-    // RLS rejects the insert (e.g. no username yet, or chapter still locked).
-    return {
-      ok: false,
-      message:
-        "Couldn't post that — make sure you've set a username and have read through this chapter.",
-    };
-  }
-
-  revalidatePath(`/books/${bookId}`);
-  return { ok: true };
-}
-
-// Add a comment to a thread, or a reply to a comment (parentId set). A trigger
-// drops a notification into the thread/comment author's inbox. RLS requires a
-// username and that the thread's chapter is unlocked for the commenter.
+// Add a comment to a chapter's discussion, or a reply to an existing comment.
+//
+// The UI is a flat per-chapter stream — there are no named threads. Under the
+// hood each chapter still has ONE implicit thread (author-less); we resolve it
+// with ensure_chapter_thread() for a top-level comment. A reply instead reuses
+// the parent comment's thread so it lands in the same chapter discussion.
+//
+// RLS still does the real gating (username required, chapter unlocked, author =
+// self); a trigger drops a reply notification into the recipient's inbox.
 export async function addComment(formData: FormData): Promise<Result> {
   const supabase = await createClient();
   const {
@@ -57,13 +23,42 @@ export async function addComment(formData: FormData): Promise<Result> {
   if (!user) return { ok: false, message: "You must be signed in." };
 
   const bookId = String(formData.get("bookId") ?? "").trim();
-  const threadId = String(formData.get("threadId") ?? "").trim();
+  const chapterId = String(formData.get("chapterId") ?? "").trim();
   const parentId = String(formData.get("parentId") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
-  if (!threadId) return { ok: false, message: "Missing thread." };
   if (!body) return { ok: false, message: "Write something first." };
   if (body.length > 4000)
     return { ok: false, message: "That comment is too long." };
+
+  // Figure out which thread this comment belongs to.
+  let threadId: string;
+  if (parentId) {
+    // A reply: use the parent comment's thread so it stays in the same chapter.
+    const { data: parent, error: parentErr } = await supabase
+      .from("comments")
+      .select("thread_id")
+      .eq("id", parentId)
+      .maybeSingle();
+    if (parentErr || !parent) {
+      return { ok: false, message: "Couldn't find the comment you're replying to." };
+    }
+    threadId = parent.thread_id;
+  } else {
+    // A top-level comment: find or create this chapter's implicit thread.
+    if (!chapterId) return { ok: false, message: "Missing chapter." };
+    const { data: tid, error: threadErr } = await supabase.rpc(
+      "ensure_chapter_thread",
+      { cid: chapterId },
+    );
+    if (threadErr || !tid) {
+      return {
+        ok: false,
+        message:
+          "Couldn't post that — make sure you've set a username and have read through this chapter.",
+      };
+    }
+    threadId = tid;
+  }
 
   const { error } = await supabase.from("comments").insert({
     thread_id: threadId,
@@ -83,9 +78,9 @@ export async function addComment(formData: FormData): Promise<Result> {
   return { ok: true };
 }
 
-// Cast, change, or clear a vote on a thread or comment. Voting again with the
-// same direction toggles the vote off; voting the other way flips it. One row
-// per (user, target) is guaranteed by the table's primary key.
+// Cast, change, or clear a vote on a comment. Voting again with the same
+// direction toggles the vote off; voting the other way flips it. One row per
+// (user, target) is guaranteed by the table's primary key.
 export async function castVote(
   targetType: VoteTarget,
   targetId: string,

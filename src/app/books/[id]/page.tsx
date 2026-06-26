@@ -7,7 +7,7 @@ import { addChapter } from "../actions";
 import { type GalleryArt } from "../../_components/art-gallery";
 import { ArtUpload } from "../../_components/art-upload";
 import { ChapterSection } from "./chapter-section";
-import { DiscussionPanel, type DiscThread } from "./discussion-panel";
+import { type ChapterComment } from "./chapter-talk";
 
 export async function generateMetadata({
   params,
@@ -100,14 +100,17 @@ export default async function BookPage({
   }
 
   // ---- Discussion data ----------------------------------------------------
-  // RLS only returns threads/comments for chapters the reader has unlocked (plus
-  // their own), so the spoiler gate holds even though we query the whole book.
+  // Comments live under per-chapter "threads" (one implicit thread per chapter
+  // in the new flat model, plus any legacy titled threads). We fetch the threads
+  // only to map each comment back to its chapter; the UI never shows threads.
+  // RLS only returns rows for chapters the reader has unlocked, so the spoiler
+  // gate holds even though we query the whole book.
   const { data: threadRows } = await supabase
     .from("threads")
-    .select("id, chapter_id, author_id, title, body, created_at")
-    .eq("book_id", id)
-    .order("created_at", { ascending: false });
+    .select("id, chapter_id")
+    .eq("book_id", id);
   const threadList = threadRows ?? [];
+  const chapterOfThread = new Map(threadList.map((t) => [t.id, t.chapter_id]));
   const threadIds = threadList.map((t) => t.id);
 
   const { data: commentRows } = threadIds.length
@@ -119,20 +122,21 @@ export default async function BookPage({
     : { data: [] };
   const commentList = commentRows ?? [];
 
-  // Vote tallies for every visible thread + comment, in one query.
-  const targetIds = [...threadIds, ...commentList.map((c) => c.id)];
-  const { data: voteRows } = targetIds.length
+  // Vote tallies for every visible comment, in one query.
+  const commentIds = commentList.map((c) => c.id);
+  const { data: voteRows } = commentIds.length
     ? await supabase
         .from("votes")
         .select("target_type, target_id, value, user_id")
-        .in("target_id", targetIds)
+        .eq("target_type", "comment")
+        .in("target_id", commentIds)
     : { data: [] };
   const votes = voteRows ?? [];
-  const tally = (type: "thread" | "comment", targetId: string) => {
+  const tallyComment = (targetId: string) => {
     let score = 0;
     let myVote = 0;
     for (const v of votes) {
-      if (v.target_type === type && v.target_id === targetId) {
+      if (v.target_id === targetId) {
         score += v.value;
         if (user && v.user_id === user.id) myVote = v.value;
       }
@@ -140,14 +144,11 @@ export default async function BookPage({
     return { score, myVote };
   };
 
-  // Public display names for thread/comment authors. We show the chosen public
+  // Public display names for comment authors. We show the chosen public
   // USERNAME only — never the reader's real name — to honor the privacy promise.
   const authorIds = [
     ...new Set(
-      [
-        ...threadList.map((t) => t.author_id),
-        ...commentList.map((c) => c.author_id),
-      ].filter((x): x is string => !!x),
+      commentList.map((c) => c.author_id).filter((x): x is string => !!x),
     ),
   ];
   const nameById = new Map<string, string>();
@@ -164,10 +165,14 @@ export default async function BookPage({
     (uid && nameById.get(uid)) || "reader";
 
   const chapterById = new Map(chapters.map((c) => [c.id, c]));
-  const commentsByThread = new Map<string, DiscThread["comments"]>();
+  // Group every comment under the CHAPTER its thread belongs to, so each chapter
+  // shows one flat discussion regardless of how many underlying threads exist.
+  const commentsByChapter = new Map<string, ChapterComment[]>();
   for (const c of commentList) {
-    const { score, myVote } = tally("comment", c.id);
-    const list = commentsByThread.get(c.thread_id) ?? [];
+    const chapterId = chapterOfThread.get(c.thread_id);
+    if (!chapterId) continue;
+    const { score, myVote } = tallyComment(c.id);
+    const list = commentsByChapter.get(chapterId) ?? [];
     list.push({
       id: c.id,
       parentId: c.parent_id,
@@ -177,26 +182,8 @@ export default async function BookPage({
       score,
       myVote,
     });
-    commentsByThread.set(c.thread_id, list);
+    commentsByChapter.set(chapterId, list);
   }
-  const threads: DiscThread[] = threadList.map((t) => {
-    const ch = chapterById.get(t.chapter_id);
-    const { score, myVote } = tally("thread", t.id);
-    return {
-      id: t.id,
-      chapterId: t.chapter_id,
-      chapterNumber: ch?.number ?? 0,
-      chapterTitle: ch?.title ?? null,
-      title: t.title,
-      body: t.body,
-      author: nameOf(t.author_id),
-      createdAt: t.created_at,
-      score,
-      myVote,
-      comments: commentsByThread.get(t.id) ?? [],
-    };
-  });
-  const unlockedChapters = chapters.filter((c) => c.number <= readThrough);
 
   const nextNumber =
     chapters.length > 0 ? chapters[chapters.length - 1].number + 1 : 1;
@@ -298,7 +285,9 @@ export default async function BookPage({
             chapters={chapters}
             readThrough={readThrough}
             artByChapter={Object.fromEntries(artByChapter)}
+            commentsByChapter={Object.fromEntries(commentsByChapter)}
             signedIn={!!user}
+            hasUsername={hasUsername}
             isMod={isMod}
           />
 
@@ -370,23 +359,6 @@ export default async function BookPage({
           {user && chapters.length > 0 ? (
             <ArtUpload bookId={book.id} chapters={chapters} isMod={isMod} />
           ) : null}
-        </section>
-
-        {/* Discussion — chapter-gated threads + comments */}
-        <section className="mt-10">
-          <h2
-            className="mb-3 font-display text-[18px] font-medium"
-            style={{ color: "var(--silver-bright)" }}
-          >
-            Discussion
-          </h2>
-          <DiscussionPanel
-            bookId={book.id}
-            unlockedChapters={unlockedChapters}
-            threads={threads}
-            signedIn={!!user}
-            hasUsername={hasUsername}
-          />
         </section>
       </main>
     </div>
