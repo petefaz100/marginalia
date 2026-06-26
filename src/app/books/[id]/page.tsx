@@ -3,10 +3,9 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SiteHeader } from "../../_components/site-header";
 import { CoverArt } from "../../_components/cover-art";
-import { addChapter } from "../actions";
 import { type GalleryArt } from "../../_components/art-gallery";
-import { ArtUpload } from "../../_components/art-upload";
 import { ChapterSection } from "./chapter-section";
+import { Contribute } from "./contribute";
 import { type ChapterComment } from "./chapter-talk";
 
 export async function generateMetadata({
@@ -164,7 +163,6 @@ export default async function BookPage({
   const nameOf = (uid: string | null) =>
     (uid && nameById.get(uid)) || "reader";
 
-  const chapterById = new Map(chapters.map((c) => [c.id, c]));
   // Group every comment under the CHAPTER its thread belongs to, so each chapter
   // shows one flat discussion regardless of how many underlying threads exist.
   const commentsByChapter = new Map<string, ChapterComment[]>();
@@ -184,9 +182,6 @@ export default async function BookPage({
     });
     commentsByChapter.set(chapterId, list);
   }
-
-  const nextNumber =
-    chapters.length > 0 ? chapters[chapters.length - 1].number + 1 : 1;
 
   return (
     <div
@@ -228,58 +223,8 @@ export default async function BookPage({
           </div>
         </div>
 
-        {/* Reading position */}
-        <section className="mt-7">
-          <h2
-            className="mb-2 text-[11.5px] tracking-[.16em] uppercase"
-            style={{ color: "var(--ember-soft)" }}
-          >
-            Your progress
-          </h2>
-          {!user ? (
-            <p className="text-[13px]" style={{ color: "var(--muted)" }}>
-              Sign in to track how far you&apos;ve read — art stays hidden until
-              you reach the chapter it belongs to.
-            </p>
-          ) : chapters.length === 0 ? (
-            <p className="text-[13px]" style={{ color: "var(--muted)" }}>
-              Add a chapter below, then mark it read to start revealing art.
-            </p>
-          ) : readThrough > 0 ? (
-            <>
-              <p
-                className="font-display text-[18px] font-medium"
-                style={{ color: "var(--silver-bright)" }}
-              >
-                You&apos;re currently on chapter {readThrough}
-                {chapterById.get(
-                  chapters.find((c) => c.number === readThrough)?.id ?? "",
-                )?.title
-                  ? ` · ${chapters.find((c) => c.number === readThrough)?.title}`
-                  : ""}
-              </p>
-              <p className="mt-0.5 text-[12.5px]" style={{ color: "var(--muted)" }}>
-                Art and discussion up to here are unlocked. Use the ✓ button on a
-                chapter below to move your place.
-              </p>
-            </>
-          ) : (
-            <p className="text-[13px]" style={{ color: "var(--silver)" }}>
-              You haven&apos;t marked any chapters read yet — tap the circle on
-              the left of a chapter below to reveal its art.
-            </p>
-          )}
-        </section>
-
         {/* Chapters + spoiler gate */}
-        <section className="mt-8">
-          <h2
-            className="mb-3 font-display text-[18px] font-medium"
-            style={{ color: "var(--silver-bright)" }}
-          >
-            Chapters
-          </h2>
-
+        <section className="mt-7">
           <ChapterSection
             bookId={book.id}
             chapters={chapters}
@@ -291,73 +236,8 @@ export default async function BookPage({
             isMod={isMod}
           />
 
-          {/* Add a chapter */}
           {user ? (
-            <form
-              action={addChapter}
-              className="mt-4 flex items-end gap-2 rounded-[var(--radius-sm)] p-3"
-              style={{
-                border: "1px solid var(--line)",
-                background: "var(--obsidian-2)",
-              }}
-            >
-              <input type="hidden" name="bookId" value={book.id} />
-              <label className="shrink-0">
-                <span
-                  className="mb-1 block text-[11px] tracking-wide uppercase"
-                  style={{ color: "var(--muted)" }}
-                >
-                  No.
-                </span>
-                <input
-                  type="number"
-                  name="number"
-                  min={1}
-                  defaultValue={nextNumber}
-                  className="h-10 w-16 rounded-[10px] px-2.5 text-[14px] outline-none"
-                  style={{
-                    border: "1px solid var(--line-2)",
-                    background: "var(--obsidian-3)",
-                    color: "var(--silver-bright)",
-                  }}
-                />
-              </label>
-              <label className="min-w-0 flex-1">
-                <span
-                  className="mb-1 block text-[11px] tracking-wide uppercase"
-                  style={{ color: "var(--muted)" }}
-                >
-                  Chapter title (optional)
-                </span>
-                <input
-                  type="text"
-                  name="title"
-                  placeholder="e.g. The Shattered Sea"
-                  autoComplete="off"
-                  className="h-10 w-full rounded-[10px] px-2.5 text-[14px] outline-none"
-                  style={{
-                    border: "1px solid var(--line-2)",
-                    background: "var(--obsidian-3)",
-                    color: "var(--silver-bright)",
-                  }}
-                />
-              </label>
-              <button
-                type="submit"
-                className="h-10 shrink-0 rounded-[10px] px-4 text-[13px] font-semibold"
-                style={{ background: "var(--ember)", color: "#fff" }}
-              >
-                Add
-              </button>
-            </form>
-          ) : (
-            <p className="mt-4 text-[12.5px]" style={{ color: "var(--muted)" }}>
-              Sign in to add chapters.
-            </p>
-          )}
-
-          {user && chapters.length > 0 ? (
-            <ArtUpload bookId={book.id} chapters={chapters} isMod={isMod} />
+            <Contribute bookId={book.id} chapters={chapters} isMod={isMod} />
           ) : null}
         </section>
       </main>
