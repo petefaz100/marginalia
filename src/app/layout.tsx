@@ -78,7 +78,7 @@ const siteJsonLd = {
       name: "marginalia",
       url: "https://www.marginaliaart.com",
       logo: "https://www.marginaliaart.com/opengraph-image.png",
-      email: "peterfaison@gmail.com",
+      email: "peterfazon@gmail.com",
     },
   ],
 };

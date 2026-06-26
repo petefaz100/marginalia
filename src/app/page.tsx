@@ -32,7 +32,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "I'm an artist or author and I don't want my book or art featured here.",
-    a: "Just let us know and we'll take it down promptly — email peterfaison@gmail.com.",
+    a: "Just let us know and we'll take it down promptly — email peterfazon@gmail.com.",
   },
 ];
 
@@ -521,11 +521,11 @@ export default function Home() {
                       Just let us know and we&apos;ll take it down promptly —
                       email{" "}
                       <a
-                        href="mailto:peterfaison@gmail.com"
+                        href="mailto:peterfazon@gmail.com"
                         className="underline"
                         style={{ color: "var(--ember-soft)" }}
                       >
-                        peterfaison@gmail.com
+                        peterfazon@gmail.com
                       </a>
                       .
                     </>
