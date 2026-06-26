@@ -13,15 +13,33 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // First-time readers have no public username yet — send them to set one
+      // before they land anywhere they might want to post. We pass the original
+      // destination along as ?next so they continue there after choosing.
+      let dest = next;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", user.id)
+          .single();
+        if (!profile?.username) {
+          dest = `/account?next=${encodeURIComponent(next)}`;
+        }
+      }
+
       // In production behind a proxy, prefer the forwarded host.
       const forwardedHost = request.headers.get("x-forwarded-host");
       const isLocalEnv = process.env.NODE_ENV === "development";
       if (isLocalEnv) {
-        return NextResponse.redirect(`${origin}${next}`);
+        return NextResponse.redirect(`${origin}${dest}`);
       } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${next}`);
+        return NextResponse.redirect(`https://${forwardedHost}${dest}`);
       } else {
-        return NextResponse.redirect(`${origin}${next}`);
+        return NextResponse.redirect(`${origin}${dest}`);
       }
     }
   }

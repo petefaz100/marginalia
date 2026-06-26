@@ -7,15 +7,18 @@ type ChapterOption = { id: string; number: number; title: string | null };
 
 type SubmitState = { status: "idle" | "ok" | "error"; error?: string };
 
-// Art submission form: pick a chapter (its spoiler level), choose an image,
-// add optional credit. Lives on the book page for signed-in readers. Uploads
-// land as 'pending' for a mod to approve.
+// Art form: pick a chapter (its spoiler level), choose an image, add optional
+// credit. Lives on the book page for signed-in readers. A regular reader's
+// upload lands as 'pending' for a mod to approve; a MODERATOR's goes live
+// immediately, so the wording drops the "review" language for them.
 export function ArtUpload({
   bookId,
   chapters,
+  isMod = false,
 }: {
   bookId: string;
   chapters: ChapterOption[];
+  isMod?: boolean;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -51,11 +54,12 @@ export function ArtUpload({
           className="text-[11px] tracking-wide uppercase"
           style={{ color: "var(--ember-soft)" }}
         >
-          ✓ Submitted
+          {isMod ? "✓ Added" : "✓ Submitted"}
         </p>
         <p className="text-[13px]" style={{ color: "var(--silver)" }}>
-          Thanks — your art is in the moderation queue. It&apos;ll appear here
-          once a moderator approves it.
+          {isMod
+            ? "Image added — it's live now for readers who've reached this chapter."
+            : "Thanks — your art is in the moderation queue. It'll appear here once a moderator approves it."}
         </p>
         <button
           type="button"
@@ -69,7 +73,7 @@ export function ArtUpload({
           className="mt-1 text-[12.5px] font-semibold"
           style={{ color: "var(--ember-soft)" }}
         >
-          Submit another piece
+          {isMod ? "Add another image" : "Submit another piece"}
         </button>
       </div>
     );
@@ -91,7 +95,7 @@ export function ArtUpload({
         className="text-[11px] tracking-wide uppercase"
         style={{ color: "var(--muted)" }}
       >
-        Contribute art
+        {isMod ? "Add art to this book" : "Contribute art"}
       </p>
 
       <label className="flex flex-col gap-1">
@@ -212,10 +216,12 @@ export function ArtUpload({
         className="h-10 rounded-[10px] px-4 text-[13px] font-semibold disabled:opacity-60"
         style={{ background: "var(--ember)", color: "#fff" }}
       >
-        {pending ? "Uploading…" : "Submit for review"}
+        {pending ? "Uploading…" : isMod ? "Add image" : "Submit for review"}
       </button>
       <p className="text-[11.5px]" style={{ color: "var(--muted)" }}>
-        Submissions are reviewed by a moderator before they appear.
+        {isMod
+          ? "As a moderator, images you add go live immediately — no review needed."
+          : "Submissions are reviewed by a moderator before they appear."}
       </p>
     </form>
   );

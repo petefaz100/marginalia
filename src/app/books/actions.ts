@@ -109,17 +109,23 @@ const ALLOWED_IMAGE_TYPES: Record<string, string> = {
 };
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB — matches next.config's body limit.
 
-// Submits a piece of fan art tagged to a chapter. The image file is stored in
-// the 'art' storage bucket; the row is always created as 'pending' (RLS
-// enforces this) so a mod approves it before non-uploaders can see it. The
+// Adds a piece of fan art tagged to a chapter. The image file is stored in the
+// 'art' storage bucket. A regular reader's piece is created as 'pending' so a
+// mod approves it before others can see it; a MODERATOR's piece is created as
+// 'approved' and appears immediately (mods don't review their own work). The
 // chosen chapter IS the spoiler level: the art stays hidden until a reader has
-// marked that chapter read.
-export async function submitArt(formData: FormData) {
+// marked that chapter read. Returns whether it went live directly (mod add).
+export async function submitArt(
+  formData: FormData,
+): Promise<{ direct: boolean }> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("You must be signed in to submit art.");
+
+  // Mods skip the review queue — their uploads go straight to 'approved'.
+  const { data: isMod } = await supabase.rpc("is_mod");
 
   const bookId = String(formData.get("bookId") ?? "").trim();
   const chapterId = String(formData.get("chapterId") ?? "").trim();
@@ -161,7 +167,7 @@ export async function submitArt(formData: FormData) {
     artist_handle: artistHandle || null,
     credit_url: creditUrl || null,
     uploaded_by: user.id,
-    status: "pending",
+    status: isMod ? "approved" : "pending",
   });
   if (error) {
     // Best-effort cleanup so a failed insert doesn't orphan the file.
@@ -170,6 +176,34 @@ export async function submitArt(formData: FormData) {
   }
 
   revalidatePath(`/books/${bookId}`);
+  return { direct: !!isMod };
+}
+
+// Mods remove a piece of art outright (e.g. wrong chapter, off-topic, or a bad
+// upload). Deletes the row so it leaves every reader's gallery; RLS already
+// limits deletes to the uploader or a mod, and we re-check is_mod here so the
+// delete control we expose only to mods can't be driven by a regular reader.
+export async function deleteArt(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("You must be signed in.");
+
+  const { data: isMod } = await supabase.rpc("is_mod");
+  if (!isMod) throw new Error("Mods only.");
+
+  const artworkId = String(formData.get("artworkId") ?? "").trim();
+  const bookId = String(formData.get("bookId") ?? "").trim();
+  if (!artworkId) throw new Error("Missing artwork.");
+
+  const { error } = await supabase
+    .from("artworks")
+    .delete()
+    .eq("id", artworkId);
+  if (error) throw new Error(error.message);
+
+  if (bookId) revalidatePath(`/books/${bookId}`);
 }
 
 // Flags a piece of art for mod review. Anyone signed in can file one; only

@@ -7,6 +7,7 @@ import { addChapter } from "../actions";
 import { type GalleryArt } from "../../_components/art-gallery";
 import { ArtUpload } from "../../_components/art-upload";
 import { ChapterSection } from "./chapter-section";
+import { DiscussionPanel, type DiscThread } from "./discussion-panel";
 
 export async function generateMetadata({
   params,
@@ -48,6 +49,20 @@ export default async function BookPage({
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Whether the viewer is a mod (sees Add/Delete controls) and whether they've
+  // chosen a public username (required before posting in discussions).
+  let isMod = false;
+  let hasUsername = false;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_mod, username")
+      .eq("id", user.id)
+      .maybeSingle();
+    isMod = profile?.is_mod ?? false;
+    hasUsername = !!profile?.username;
+  }
+
   const { data: chapterRows } = await supabase
     .from("chapters")
     .select("id, number, title")
@@ -83,6 +98,105 @@ export default async function BookPage({
     list.push(a);
     artByChapter.set(a.chapter_id, list);
   }
+
+  // ---- Discussion data ----------------------------------------------------
+  // RLS only returns threads/comments for chapters the reader has unlocked (plus
+  // their own), so the spoiler gate holds even though we query the whole book.
+  const { data: threadRows } = await supabase
+    .from("threads")
+    .select("id, chapter_id, author_id, title, body, created_at")
+    .eq("book_id", id)
+    .order("created_at", { ascending: false });
+  const threadList = threadRows ?? [];
+  const threadIds = threadList.map((t) => t.id);
+
+  const { data: commentRows } = threadIds.length
+    ? await supabase
+        .from("comments")
+        .select("id, thread_id, parent_id, author_id, body, created_at")
+        .in("thread_id", threadIds)
+        .order("created_at", { ascending: true })
+    : { data: [] };
+  const commentList = commentRows ?? [];
+
+  // Vote tallies for every visible thread + comment, in one query.
+  const targetIds = [...threadIds, ...commentList.map((c) => c.id)];
+  const { data: voteRows } = targetIds.length
+    ? await supabase
+        .from("votes")
+        .select("target_type, target_id, value, user_id")
+        .in("target_id", targetIds)
+    : { data: [] };
+  const votes = voteRows ?? [];
+  const tally = (type: "thread" | "comment", targetId: string) => {
+    let score = 0;
+    let myVote = 0;
+    for (const v of votes) {
+      if (v.target_type === type && v.target_id === targetId) {
+        score += v.value;
+        if (user && v.user_id === user.id) myVote = v.value;
+      }
+    }
+    return { score, myVote };
+  };
+
+  // Public display names for thread/comment authors. We show the chosen public
+  // USERNAME only — never the reader's real name — to honor the privacy promise.
+  const authorIds = [
+    ...new Set(
+      [
+        ...threadList.map((t) => t.author_id),
+        ...commentList.map((c) => c.author_id),
+      ].filter((x): x is string => !!x),
+    ),
+  ];
+  const nameById = new Map<string, string>();
+  if (authorIds.length) {
+    const { data: authors } = await supabase
+      .from("profiles")
+      .select("id, username")
+      .in("id", authorIds);
+    for (const a of authors ?? []) {
+      nameById.set(a.id, a.username || "reader");
+    }
+  }
+  const nameOf = (uid: string | null) =>
+    (uid && nameById.get(uid)) || "reader";
+
+  const chapterById = new Map(chapters.map((c) => [c.id, c]));
+  const commentsByThread = new Map<string, DiscThread["comments"]>();
+  for (const c of commentList) {
+    const { score, myVote } = tally("comment", c.id);
+    const list = commentsByThread.get(c.thread_id) ?? [];
+    list.push({
+      id: c.id,
+      parentId: c.parent_id,
+      body: c.body,
+      author: nameOf(c.author_id),
+      createdAt: c.created_at,
+      score,
+      myVote,
+    });
+    commentsByThread.set(c.thread_id, list);
+  }
+  const threads: DiscThread[] = threadList.map((t) => {
+    const ch = chapterById.get(t.chapter_id);
+    const { score, myVote } = tally("thread", t.id);
+    return {
+      id: t.id,
+      chapterId: t.chapter_id,
+      chapterNumber: ch?.number ?? 0,
+      chapterTitle: ch?.title ?? null,
+      title: t.title,
+      body: t.body,
+      author: nameOf(t.author_id),
+      createdAt: t.created_at,
+      score,
+      myVote,
+      comments: commentsByThread.get(t.id) ?? [],
+    };
+  });
+  const unlockedChapters = chapters.filter((c) => c.number <= readThrough);
 
   const nextNumber =
     chapters.length > 0 ? chapters[chapters.length - 1].number + 1 : 1;
@@ -144,11 +258,28 @@ export default async function BookPage({
             <p className="text-[13px]" style={{ color: "var(--muted)" }}>
               Add a chapter below, then mark it read to start revealing art.
             </p>
+          ) : readThrough > 0 ? (
+            <>
+              <p
+                className="font-display text-[18px] font-medium"
+                style={{ color: "var(--silver-bright)" }}
+              >
+                You&apos;re currently on chapter {readThrough}
+                {chapterById.get(
+                  chapters.find((c) => c.number === readThrough)?.id ?? "",
+                )?.title
+                  ? ` · ${chapters.find((c) => c.number === readThrough)?.title}`
+                  : ""}
+              </p>
+              <p className="mt-0.5 text-[12.5px]" style={{ color: "var(--muted)" }}>
+                Art and discussion up to here are unlocked. Use the ✓ button on a
+                chapter below to move your place.
+              </p>
+            </>
           ) : (
             <p className="text-[13px]" style={{ color: "var(--silver)" }}>
-              {readThrough > 0
-                ? `You've read through chapter ${readThrough}. Use the ✓ button on a chapter below to move your place.`
-                : "You haven't marked any chapters read yet — tap the circle on the left of a chapter below to reveal its art."}
+              You haven&apos;t marked any chapters read yet — tap the circle on
+              the left of a chapter below to reveal its art.
             </p>
           )}
         </section>
@@ -168,6 +299,7 @@ export default async function BookPage({
             readThrough={readThrough}
             artByChapter={Object.fromEntries(artByChapter)}
             signedIn={!!user}
+            isMod={isMod}
           />
 
           {/* Add a chapter */}
@@ -236,8 +368,25 @@ export default async function BookPage({
           )}
 
           {user && chapters.length > 0 ? (
-            <ArtUpload bookId={book.id} chapters={chapters} />
+            <ArtUpload bookId={book.id} chapters={chapters} isMod={isMod} />
           ) : null}
+        </section>
+
+        {/* Discussion — chapter-gated threads + comments */}
+        <section className="mt-10">
+          <h2
+            className="mb-3 font-display text-[18px] font-medium"
+            style={{ color: "var(--silver-bright)" }}
+          >
+            Discussion
+          </h2>
+          <DiscussionPanel
+            bookId={book.id}
+            unlockedChapters={unlockedChapters}
+            threads={threads}
+            signedIn={!!user}
+            hasUsername={hasUsername}
+          />
         </section>
       </main>
     </div>

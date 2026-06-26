@@ -38,12 +38,14 @@ export function ChapterSection({
   readThrough,
   artByChapter,
   signedIn,
+  isMod = false,
 }: {
   bookId: string;
   chapters: Chapter[];
   readThrough: number;
   artByChapter: Record<string, GalleryArt[]>;
   signedIn: boolean;
+  isMod?: boolean;
 }) {
   const [view, setView] = useState<"chapter" | "gallery">("chapter");
   const [query, setQuery] = useState("");
@@ -169,7 +171,7 @@ export function ChapterSection({
 
       {view === "gallery" ? (
         galleryArt.length > 0 ? (
-          <ArtGallery art={galleryArt} />
+          <ArtGallery art={galleryArt} bookId={bookId} isMod={isMod} />
         ) : (
           <p className="text-[13px]" style={{ color: "var(--muted)" }}>
             {searching
@@ -216,7 +218,7 @@ export function ChapterSection({
                       {art.length} {art.length === 1 ? "match" : "matches"}
                     </span>
                   </div>
-                  <ArtGallery art={art} />
+                  <ArtGallery art={art} bookId={bookId} isMod={isMod} />
                 </div>
               </li>
             ))}
@@ -332,7 +334,7 @@ export function ChapterSection({
                   </div>
 
                   {unlocked && count > 0 ? (
-                    <ArtGallery art={chapterArt} />
+                    <ArtGallery art={chapterArt} bookId={bookId} isMod={isMod} />
                   ) : null}
                 </div>
               </li>

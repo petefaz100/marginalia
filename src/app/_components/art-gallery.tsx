@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { reportArt } from "../books/actions";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { deleteArt, reportArt } from "../books/actions";
 
 export type GalleryArt = {
   id: string;
@@ -17,44 +18,96 @@ export type GalleryArt = {
 // pieces show with a status badge so they can see their submission is in queue.
 // Opening a piece launches a fullscreen viewer that flips between a carousel
 // (one image at a time, prev/next arrows) and a gallery grid of the whole set.
-export function ArtGallery({ art }: { art: GalleryArt[] }) {
+// Moderators (isMod) get a delete control on each piece.
+export function ArtGallery({
+  art,
+  bookId,
+  isMod = false,
+}: {
+  art: GalleryArt[];
+  bookId?: string;
+  isMod?: boolean;
+}) {
+  const router = useRouter();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [, startDelete] = useTransition();
+
+  // Shared delete flow used by both the grid and the viewer. Confirms first,
+  // then removes the row server-side (mods only) and refreshes the page.
+  function removePiece(id: string, onDone?: () => void) {
+    if (
+      !window.confirm("Are you sure you want to delete this image?")
+    )
+      return;
+    setPendingId(id);
+    const fd = new FormData();
+    fd.set("artworkId", id);
+    if (bookId) fd.set("bookId", bookId);
+    startDelete(async () => {
+      try {
+        await deleteArt(fd);
+        onDone?.();
+        router.refresh();
+      } finally {
+        setPendingId(null);
+      }
+    });
+  }
 
   return (
     <>
       <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
         {art.map((piece, i) => (
-          <button
-            key={piece.id}
-            type="button"
-            onClick={() => setOpenIndex(i)}
-            className="relative block aspect-square overflow-hidden rounded-[10px]"
-            style={{
-              border: "1px solid var(--line-2)",
-              background: "var(--obsidian-3)",
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={piece.image_url}
-              alt={piece.title ?? "Fan art"}
-              className="h-full w-full object-cover"
-            />
-            {piece.status !== "approved" ? (
-              <span
-                className="absolute bottom-1 left-1 rounded-full px-1.5 py-0.5 text-[9.5px] font-semibold tracking-wide uppercase"
+          <div key={piece.id} className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenIndex(i)}
+              className="relative block aspect-square w-full overflow-hidden rounded-[10px]"
+              style={{
+                border: "1px solid var(--line-2)",
+                background: "var(--obsidian-3)",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={piece.image_url}
+                alt={piece.title ?? "Fan art"}
+                className="h-full w-full object-cover"
+              />
+              {piece.status !== "approved" ? (
+                <span
+                  className="absolute bottom-1 left-1 rounded-full px-1.5 py-0.5 text-[9.5px] font-semibold tracking-wide uppercase"
+                  style={{
+                    background: "rgba(19,17,25,.82)",
+                    color:
+                      piece.status === "pending"
+                        ? "var(--ember-soft)"
+                        : "var(--wine-soft)",
+                  }}
+                >
+                  {piece.status}
+                </span>
+              ) : null}
+            </button>
+            {isMod ? (
+              <button
+                type="button"
+                onClick={() => removePiece(piece.id)}
+                disabled={pendingId === piece.id}
+                aria-label="Delete this image"
+                title="Delete this image"
+                className="absolute top-1 right-1 grid h-7 w-7 place-items-center rounded-full disabled:opacity-50"
                 style={{
-                  background: "rgba(19,17,25,.82)",
-                  color:
-                    piece.status === "pending"
-                      ? "var(--ember-soft)"
-                      : "var(--wine-soft)",
+                  background: "rgba(19,17,25,.86)",
+                  border: "1px solid var(--line-2)",
+                  color: "var(--wine-soft)",
                 }}
               >
-                {piece.status}
-              </span>
+                <TrashIcon />
+              </button>
             ) : null}
-          </button>
+          </div>
         ))}
       </div>
 
@@ -64,6 +117,9 @@ export function ArtGallery({ art }: { art: GalleryArt[] }) {
           index={openIndex}
           onIndexChange={setOpenIndex}
           onClose={() => setOpenIndex(null)}
+          isMod={isMod}
+          onDelete={(id) => removePiece(id, () => setOpenIndex(null))}
+          deletingId={pendingId}
         />
       ) : null}
     </>
@@ -75,11 +131,17 @@ function Viewer({
   index,
   onIndexChange,
   onClose,
+  isMod = false,
+  onDelete,
+  deletingId,
 }: {
   art: GalleryArt[];
   index: number;
   onIndexChange: (i: number) => void;
   onClose: () => void;
+  isMod?: boolean;
+  onDelete?: (id: string) => void;
+  deletingId?: string | null;
 }) {
   const [view, setView] = useState<"carousel" | "gallery">("carousel");
   const [reporting, setReporting] = useState(false);
@@ -335,6 +397,19 @@ function Viewer({
                   Report this art
                 </button>
               )}
+
+              {isMod && onDelete ? (
+                <button
+                  type="button"
+                  onClick={() => onDelete(current.id)}
+                  disabled={deletingId === current.id}
+                  className="mt-1 flex items-center gap-1.5 self-start text-[12px] font-semibold disabled:opacity-50"
+                  style={{ color: "var(--wine-soft)" }}
+                >
+                  <TrashIcon />
+                  {deletingId === current.id ? "Deleting…" : "Delete this image"}
+                </button>
+              ) : null}
             </div>
           </>
         )}
@@ -380,6 +455,26 @@ function GridIcon() {
       <rect x="14" y="3" width="7" height="7" />
       <rect x="3" y="14" width="7" height="7" />
       <rect x="14" y="14" width="7" height="7" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
     </svg>
   );
 }

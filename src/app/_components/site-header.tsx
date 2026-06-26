@@ -2,6 +2,23 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signInWithGoogle, signOut } from "../auth/actions";
 
+function NeedsUsernamePill() {
+  return (
+    <Link
+      href="/account"
+      className="flex h-10 items-center rounded-full px-3.5 text-[12.5px] font-semibold"
+      style={{
+        border: "1px solid var(--ember)",
+        background: "rgba(224,104,63,.12)",
+        color: "var(--ember-soft)",
+      }}
+      title="Choose a public username to start posting"
+    >
+      Set username
+    </Link>
+  );
+}
+
 function LeafMark() {
   return (
     <svg
@@ -67,9 +84,11 @@ function AuthControl({
 
   return (
     <div className="flex items-center gap-2">
-      <div
+      <Link
+        href="/account"
         className="flex items-center gap-2 rounded-full py-[5px] pr-3 pl-[5px]"
         style={{ border: "1px solid var(--line)", background: "var(--obsidian-2)" }}
+        title="Account settings"
       >
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -94,7 +113,7 @@ function AuthControl({
         >
           {label}
         </span>
-      </div>
+      </Link>
       <form action={signOut}>
         <button
           type="submit"
@@ -138,18 +157,22 @@ export async function SiteHeader() {
   let displayName: string | undefined;
   let avatarUrl: string | null | undefined;
   let isMod = false;
+  let needsUsername = false;
   let unread = 0;
   let pendingCount = 0;
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("handle, display_name, avatar_url, is_mod")
+      .select("handle, username, display_name, avatar_url, is_mod")
       .eq("id", user.id)
       .single();
+    // Public-facing label is the chosen username; fall back to the real name
+    // only until they've set one (we nudge them to do so right away).
     displayName =
-      profile?.display_name || profile?.handle || user.email || "reader";
+      profile?.username || profile?.display_name || profile?.handle || "reader";
     avatarUrl = profile?.avatar_url;
     isMod = profile?.is_mod ?? false;
+    needsUsername = !profile?.username;
 
     if (isMod) {
       // Mods get a badge with how many pieces are waiting in the queue.
@@ -278,6 +301,7 @@ export async function SiteHeader() {
             ) : null}
           </Link>
         ) : null}
+        {needsUsername ? <NeedsUsernamePill /> : null}
         <AuthControl signedIn={!!user} name={displayName} avatarUrl={avatarUrl} />
       </div>
     </header>

@@ -4,6 +4,14 @@
 
 export type ArtworkStatus = "pending" | "approved" | "rejected";
 
+export type NotificationKind =
+  | "art_approved"
+  | "art_rejected"
+  | "reply_thread"
+  | "reply_comment";
+
+export type VoteTarget = "thread" | "comment";
+
 export type Database = {
   public: {
     Tables: {
@@ -11,6 +19,7 @@ export type Database = {
         Row: {
           id: string;
           handle: string;
+          username: string | null;
           display_name: string | null;
           avatar_url: string | null;
           is_mod: boolean;
@@ -19,6 +28,7 @@ export type Database = {
         Insert: {
           id: string;
           handle: string;
+          username?: string | null;
           display_name?: string | null;
           avatar_url?: string | null;
           is_mod?: boolean;
@@ -27,6 +37,7 @@ export type Database = {
         Update: {
           id?: string;
           handle?: string;
+          username?: string | null;
           display_name?: string | null;
           avatar_url?: string | null;
           is_mod?: boolean;
@@ -179,39 +190,51 @@ export type Database = {
         Row: {
           id: string;
           recipient_id: string;
-          kind: "art_approved" | "art_rejected";
+          kind: NotificationKind;
           artwork_id: string | null;
           reason: string | null;
           note: string | null;
           art_title: string | null;
           art_image_url: string | null;
           book_id: string | null;
+          actor_id: string | null;
+          thread_id: string | null;
+          comment_id: string | null;
+          chapter_number: number | null;
           read_at: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           recipient_id: string;
-          kind: "art_approved" | "art_rejected";
+          kind: NotificationKind;
           artwork_id?: string | null;
           reason?: string | null;
           note?: string | null;
           art_title?: string | null;
           art_image_url?: string | null;
           book_id?: string | null;
+          actor_id?: string | null;
+          thread_id?: string | null;
+          comment_id?: string | null;
+          chapter_number?: number | null;
           read_at?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           recipient_id?: string;
-          kind?: "art_approved" | "art_rejected";
+          kind?: NotificationKind;
           artwork_id?: string | null;
           reason?: string | null;
           note?: string | null;
           art_title?: string | null;
           art_image_url?: string | null;
           book_id?: string | null;
+          actor_id?: string | null;
+          thread_id?: string | null;
+          comment_id?: string | null;
+          chapter_number?: number | null;
           read_at?: string | null;
           created_at?: string;
         };
@@ -225,11 +248,100 @@ export type Database = {
           },
         ];
       };
+      threads: {
+        Row: {
+          id: string;
+          book_id: string;
+          chapter_id: string;
+          author_id: string | null;
+          title: string;
+          body: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          book_id: string;
+          chapter_id: string;
+          author_id?: string | null;
+          title: string;
+          body?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          book_id?: string;
+          chapter_id?: string;
+          author_id?: string | null;
+          title?: string;
+          body?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      comments: {
+        Row: {
+          id: string;
+          thread_id: string;
+          parent_id: string | null;
+          author_id: string | null;
+          body: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          thread_id: string;
+          parent_id?: string | null;
+          author_id?: string | null;
+          body: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          thread_id?: string;
+          parent_id?: string | null;
+          author_id?: string | null;
+          body?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      votes: {
+        Row: {
+          user_id: string;
+          target_type: VoteTarget;
+          target_id: string;
+          value: number;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          target_type: VoteTarget;
+          target_id: string;
+          value: number;
+          created_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          target_type?: VoteTarget;
+          target_id?: string;
+          value?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
     Functions: {
       is_mod: {
         Args: Record<string, never>;
+        Returns: boolean;
+      };
+      has_username: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+      can_see_chapter: {
+        Args: { cid: string };
         Returns: boolean;
       };
       books_art_counts: {
