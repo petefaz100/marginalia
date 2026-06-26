@@ -98,7 +98,7 @@ export default async function BookPage({
 
       <main style={{ padding: "8px 2px 6px" }}>
         <Link
-          href="/"
+          href="/library"
           className="inline-block text-[12.5px]"
           style={{ color: "var(--muted)", marginBottom: 14 }}
         >

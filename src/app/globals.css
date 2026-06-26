@@ -17,6 +17,8 @@
   --wine: #8a3a5b;
   --wine-soft: #b25c7d;
   --gilt: #c9a25e;
+  --violet: #9a7fd0;
+  --violet-soft: #bda6ec;
   --flame-1: #dfe6f2;
   --flame-2: #9fb6e0;
   --flame-3: #6f8fc9;
@@ -45,6 +47,8 @@
   --color-wine: var(--wine);
   --color-wine-soft: var(--wine-soft);
   --color-gilt: var(--gilt);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
   --color-flame-1: var(--flame-1);
   --color-flame-2: var(--flame-2);
   --color-flame-3: var(--flame-3);

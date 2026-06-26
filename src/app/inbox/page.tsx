@@ -150,7 +150,7 @@ export default async function InboxPage() {
         ) : null}
 
         <Link
-          href="/"
+          href="/library"
           className="mt-8 inline-block text-[12.5px]"
           style={{ color: "var(--muted)" }}
         >

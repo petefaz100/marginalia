@@ -201,7 +201,7 @@ export default async function ModeratePage() {
         </section>
 
         <Link
-          href="/"
+          href="/library"
           className="mt-8 inline-block text-[12.5px]"
           style={{ color: "var(--muted)" }}
         >

@@ -190,6 +190,32 @@ export async function SiteHeader() {
           </i>
         </span>
       </Link>
+
+      {/* Center nav — desktop only; mobile reaches these via the page itself */}
+      <nav className="hidden items-center gap-6 md:flex">
+        <Link
+          href="/library"
+          className="text-[13.5px] font-semibold transition-colors hover:text-[var(--silver-bright)]"
+          style={{ color: "var(--silver)" }}
+        >
+          Library
+        </Link>
+        <Link
+          href="/#how"
+          className="text-[13.5px] font-semibold transition-colors hover:text-[var(--silver-bright)]"
+          style={{ color: "var(--silver)" }}
+        >
+          How it works
+        </Link>
+        <Link
+          href="/#curate"
+          className="text-[13.5px] font-semibold transition-colors hover:text-[var(--silver-bright)]"
+          style={{ color: "var(--silver)" }}
+        >
+          Apply to be a mod
+        </Link>
+      </nav>
+
       <div className="flex items-center gap-2">
         {user && !isMod ? (
           <Link

@@ -37,7 +37,7 @@ export default function NotFound() {
           never existed.
         </p>
         <Link
-          href="/"
+          href="/library"
           className="mt-6 inline-block rounded-full px-5 py-2.5 text-[13px] font-semibold"
           style={{ background: "var(--ember)", color: "#fff" }}
         >
