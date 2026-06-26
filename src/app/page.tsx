@@ -223,11 +223,9 @@ export default function Home() {
           </div>
 
           {/* Preview card: one book, a couple unlocked pieces, the rest locked.
-              The whole card links out to the featured artist's Instagram. */}
-          <a
-            href="https://www.instagram.com/madschofield/"
-            target="_blank"
-            rel="noopener noreferrer"
+              The whole card links to that book's page on the site. */}
+          <Link
+            href="/books/30611c20-80bd-433d-9669-5c2669df360d"
             className="block rounded-[var(--radius)] p-4 transition-transform hover:-translate-y-0.5"
             style={{
               border: "1px solid var(--line)",
@@ -277,7 +275,7 @@ export default function Home() {
               Featured character art by{" "}
               <span style={{ color: "var(--ember-soft)" }}>@madschofield</span>
             </p>
-          </a>
+          </Link>
         </section>
 
         {/* ---------------- How the gate works ---------------- */}
