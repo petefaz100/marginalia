@@ -192,7 +192,7 @@ export async function SiteHeader() {
       className="sticky top-0 z-40 flex items-center justify-between gap-3"
       style={{
         padding: "16px 0 12px",
-        background: "var(--obsidian)",
+        background: "transparent",
       }}
     >
       <Link href="/" className="flex min-w-0 items-center gap-2.5">
