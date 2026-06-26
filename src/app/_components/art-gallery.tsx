@@ -22,7 +22,7 @@ export function ArtGallery({ art }: { art: GalleryArt[] }) {
 
   return (
     <>
-      <div className="mt-3 grid grid-cols-3 gap-2">
+      <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
         {art.map((piece, i) => (
           <button
             key={piece.id}
@@ -122,7 +122,7 @@ function Viewer({
         onClick={(e) => e.stopPropagation()}
         className="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-[var(--radius)]"
         style={{
-          maxWidth: "min(92vw, 520px)",
+          maxWidth: "min(94vw, 680px)",
           border: "1px solid var(--line-2)",
           background: "var(--obsidian-2)",
         }}
@@ -177,7 +177,7 @@ function Viewer({
         {view === "gallery" ? (
           // Gallery view: every piece at once; tap one to view it big.
           <div className="overflow-y-auto p-3">
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {art.map((piece, i) => (
                 <button
                   key={piece.id}

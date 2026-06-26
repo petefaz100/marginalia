@@ -152,9 +152,8 @@ export default async function ModeratePage() {
 
   return (
     <div
-      className="relative mx-auto min-h-screen"
+      className="relative mx-auto min-h-screen w-full max-w-[540px] md:max-w-[680px]"
       style={{
-        maxWidth: "var(--maxw)",
         padding: "0 18px calc(40px + env(safe-area-inset-bottom))",
       }}
     >

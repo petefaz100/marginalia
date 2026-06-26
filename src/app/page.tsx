@@ -191,9 +191,8 @@ export default async function Home({
 
   return (
     <div
-      className="relative mx-auto min-h-screen"
+      className="relative mx-auto min-h-screen w-full max-w-[540px] sm:max-w-[680px] lg:max-w-[1000px]"
       style={{
-        maxWidth: "var(--maxw)",
         padding: "0 18px calc(40px + env(safe-area-inset-bottom))",
       }}
     >
@@ -314,7 +313,7 @@ export default async function Home({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-x-3 gap-y-5">
+            <div className="grid grid-cols-3 gap-x-3 gap-y-5 sm:grid-cols-4 sm:gap-x-4 lg:grid-cols-6">
               {library.map((book) => (
                 <BookCard key={book.id} book={book} empty={!hasArt(book.id)} />
               ))}
