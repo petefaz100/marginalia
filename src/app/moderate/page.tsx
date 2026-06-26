@@ -228,7 +228,7 @@ export default async function ModeratePage() {
               ? "No applications waiting."
               : `${applications.length} ${
                   applications.length === 1 ? "person wants" : "people want"
-                } to help curate. Reach out by email, then mark it handled.`}
+                } to help curate. Accept to grant mod abilities (their account must use the same email), or reject to clear it.`}
           </p>
           <ApplicationsQueue items={applications} />
         </section>

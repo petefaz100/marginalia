@@ -72,7 +72,7 @@ export function ArtGallery({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={piece.image_url}
-                alt={piece.title ?? "Fan art"}
+                alt={piece.title ?? "Art"}
                 className="h-full w-full object-cover"
               />
               {piece.status !== "approved" ? (
@@ -260,7 +260,7 @@ function Viewer({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={piece.image_url}
-                    alt={piece.title ?? "Fan art"}
+                    alt={piece.title ?? "Art"}
                     className="h-full w-full object-cover"
                   />
                 </button>
@@ -274,7 +274,7 @@ function Viewer({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={current.image_url}
-                alt={current.title ?? "Fan art"}
+                alt={current.title ?? "Art"}
                 className="max-h-[60vh] w-full object-contain"
                 style={{ background: "var(--obsidian-3)" }}
               />

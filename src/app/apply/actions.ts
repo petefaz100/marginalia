@@ -5,7 +5,7 @@ import type { ModApplicantRole } from "@/lib/supabase/types";
 
 type Result = { ok: boolean; message?: string };
 
-const ROLES: ModApplicantRole[] = ["book_artist", "artist_or_author", "reader"];
+const ROLES: ModApplicantRole[] = ["artist", "author", "reader"];
 
 // Submit a "become a mod" application. The /apply form is public, so this works
 // whether or not the visitor is signed in — we attach their profile id when we

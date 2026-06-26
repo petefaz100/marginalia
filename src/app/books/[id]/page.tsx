@@ -30,8 +30,8 @@ export async function generateMetadata({
   return {
     title: book.title,
     description: book.author
-      ? `Fan art for ${book.title} by ${book.author}, chapter by chapter.`
-      : `Fan art for ${book.title}, chapter by chapter.`,
+      ? `Spoiler-safe art for ${book.title} by ${book.author}, revealed chapter by chapter.`
+      : `Spoiler-safe art for ${book.title}, revealed chapter by chapter.`,
   };
 }
 

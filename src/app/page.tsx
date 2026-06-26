@@ -2,14 +2,43 @@ import Link from "next/link";
 import { SiteHeader } from "./_components/site-header";
 
 export const metadata = {
-  title: "marginalia — book art without spoilers",
+  title: "marginalia — a community home for book art, without spoilers",
   description:
-    "Explore chapter-safe art, character visuals, discussions, and recaps that unlock only as far as you've read.",
+    "A community-built home for the art and conversation around the books you love — by indie artists and authors, revealed only as far as you've read.",
 };
 
-// Two CTAs reused across the page: a warm primary "apply to be a mod" and a
-// quieter "browse books". Both take an href so the same component serves the
-// hero, mid-page, and footer placements.
+// FAQ content lives in one place: rendered visibly below and emitted as
+// FAQPage structured data so search engines and AI answer-engines can quote it.
+const FAQS: { q: string; a: string }[] = [
+  {
+    q: "What is marginalia?",
+    a: "A community-driven home for the art and discussion that grows up around the books you love — kept in step with how far you've read, so nothing ahead is spoiled.",
+  },
+  {
+    q: "Is it free?",
+    a: "Yes. Browsing books, viewing art, and joining discussions are all free.",
+  },
+  {
+    q: "What does “spoiler-safe” actually mean?",
+    a: "You set the chapter you've read to. Any art or discussion from later chapters stays locked until you reach it — and the gate is enforced on the server, not just hidden in the page.",
+  },
+  {
+    q: "I'm an independent artist — can I share my work here?",
+    a: "Absolutely. marginalia is built to give indie artists a place to show their work, credited and tied to the right chapter. Apply to be a mod to start adding art.",
+  },
+  {
+    q: "I'm an author — can I gather my book's art in one place?",
+    a: "Yes. Independent authors can bring all the art for their book together in a single spoiler-safe home for their readers.",
+  },
+  {
+    q: "I'm an artist or author and I don't want my book or art featured here.",
+    a: "Just let us know and we'll take it down promptly — email peterfaison@gmail.com.",
+  },
+];
+
+// Two CTAs reused across the page: a warm primary "Browse Books" and a quieter
+// "Apply to be a Mod". Both take an href so the same component serves the hero
+// and footer placements.
 function PrimaryCta({
   href,
   children,
@@ -57,13 +86,13 @@ function SecondaryCta({
 function CtaPair({ className = "" }: { className?: string }) {
   return (
     <div className={`flex flex-wrap gap-3 ${className}`}>
-      <PrimaryCta href="/apply">apply to be a mod</PrimaryCta>
-      <SecondaryCta href="/library">browse books</SecondaryCta>
+      <PrimaryCta href="/library">Browse Books</PrimaryCta>
+      <SecondaryCta href="/apply">Apply to be a Mod</SecondaryCta>
     </div>
   );
 }
 
-// Soft-bordered dark panel used for every feature/problem/step card.
+// Soft-bordered dark panel used for every feature/step card.
 function Card({
   children,
   className = "",
@@ -107,15 +136,9 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-// A tiny abstract stand-in for fan art — no real copyrighted imagery, just a
-// blurred fantasy-toned panel with a soft glow.
-function ArtPlaceholder({
-  locked,
-  hue,
-}: {
-  locked?: boolean;
-  hue: string;
-}) {
+// A tiny abstract stand-in for a piece of art — no real imagery, just a blurred
+// fantasy-toned panel with a soft glow.
+function ArtPlaceholder({ locked, hue }: { locked?: boolean; hue: string }) {
   return (
     <div
       className="relative aspect-square overflow-hidden rounded-[10px]"
@@ -139,40 +162,50 @@ function ArtPlaceholder({
 }
 
 export default function Home() {
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQS.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  };
+
   return (
     <div
       className="relative mx-auto min-h-screen w-full max-w-[540px] sm:max-w-[680px] lg:max-w-[1040px]"
       style={{ padding: "0 18px calc(56px + env(safe-area-inset-bottom))" }}
     >
+      {/* FAQ structured data for Google / AI answer engines */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+
       <SiteHeader />
 
       <main>
         {/* ---------------- Hero ---------------- */}
         <section className="grid items-center gap-10 pt-6 pb-4 lg:grid-cols-2 lg:gap-12 lg:pt-12">
           <div>
-            <Eyebrow>a spoiler-safe reading companion</Eyebrow>
+            <Eyebrow>a community-driven reading companion</Eyebrow>
             <h1
               className="mt-4 font-display text-[40px] leading-[1.05] font-medium sm:text-[52px]"
               style={{ color: "var(--silver-bright)" }}
             >
-              book art{" "}
+              Book art,{" "}
               <span style={{ color: "var(--ember)" }}>without</span> spoilers.
             </h1>
             <p
               className="mt-5 max-w-[480px] text-[15.5px] leading-relaxed"
               style={{ color: "var(--silver)" }}
             >
-              Explore chapter-safe art, character visuals, discussions, and
-              recaps that unlock only as far as you&apos;ve read.
+              A home built by readers for the art and conversation around the
+              books you love — championing independent artists and authors, and
+              revealed only as far as you&apos;ve read.
             </p>
             <CtaPair className="mt-7" />
-            <p
-              className="mt-6 text-[12.5px]"
-              style={{ color: "var(--muted)" }}
-            >
-              Chapter-locked. Spoiler-aware. Built for readers who hate
-              accidental spoilers.
-            </p>
           </div>
 
           {/* Preview card: one book, a couple unlocked pieces, the rest locked */}
@@ -225,84 +258,49 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ---------------- Problem ---------------- */}
-        <section className="pt-20">
-          <Eyebrow>the problem</Eyebrow>
-          <SectionTitle>
-            Googling a character shouldn&apos;t ruin the book.
-          </SectionTitle>
-          <p
-            className="mt-4 max-w-[620px] text-[15px] leading-relaxed"
-            style={{ color: "var(--silver)" }}
+        {/* ---------------- Definition ---------------- */}
+        <section className="pt-16">
+          <div
+            className="rounded-[var(--radius)] p-6 sm:p-8"
+            style={{
+              border: "1px solid var(--line)",
+              background: "rgba(27,25,37,.45)",
+            }}
           >
-            You just wanted to know what a character looked like. Then Google,
-            Pinterest, Reddit, and fan art all betrayed you — three books ahead,
-            in a single thumbnail.
-          </p>
-
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            <Card>
-              <ProblemIcon kind="search" />
-              <p
-                className="mt-3 text-[15px] font-semibold"
-                style={{ color: "var(--silver-bright)" }}
-              >
-                Spoiler-filled search results
-              </p>
-              <p
-                className="mt-1.5 text-[13.5px] leading-relaxed"
+            <p
+              className="font-display text-[22px] leading-tight font-medium sm:text-[26px]"
+              style={{ color: "var(--silver-bright)" }}
+            >
+              mar·gi·na·lia{" "}
+              <span
+                className="font-sans text-[14px] font-normal italic"
                 style={{ color: "var(--muted)" }}
               >
-                One image search and the villain&apos;s big twist is sitting
-                right there in the previews.
-              </p>
-            </Card>
-            <Card>
-              <ProblemIcon kind="art" />
-              <p
-                className="mt-3 text-[15px] font-semibold"
-                style={{ color: "var(--silver-bright)" }}
-              >
-                Fan art from future chapters
-              </p>
-              <p
-                className="mt-1.5 text-[13.5px] leading-relaxed"
-                style={{ color: "var(--muted)" }}
-              >
-                Gorgeous art — of a scene you&apos;re two hundred pages away
-                from reading.
-              </p>
-            </Card>
-            <Card>
-              <ProblemIcon kind="chat" />
-              <p
-                className="mt-3 text-[15px] font-semibold"
-                style={{ color: "var(--silver-bright)" }}
-              >
-                Discussions that assume you finished
-              </p>
-              <p
-                className="mt-1.5 text-[13.5px] leading-relaxed"
-                style={{ color: "var(--muted)" }}
-              >
-                Every thread is a minefield of &ldquo;wait until you find out
-                who—.&rdquo;
-              </p>
-            </Card>
+                noun
+              </span>
+            </p>
+            <p
+              className="mt-3 max-w-[680px] text-[15px] leading-relaxed"
+              style={{ color: "var(--silver)" }}
+            >
+              The notes, sketches, and scribbles readers leave in a book&apos;s
+              margins. That&apos;s the spirit here: a shared margin for the art
+              and discussion a story inspires — kept in step with how far
+              you&apos;ve read, so the next chapter is never spoiled.
+            </p>
           </div>
         </section>
 
-        {/* ---------------- Solution ---------------- */}
+        {/* ---------------- How the gate works ---------------- */}
         <section className="pt-20">
-          <Eyebrow>the fix</Eyebrow>
-          <SectionTitle>marginalia keeps pace with your reading.</SectionTitle>
+          <Eyebrow>how it stays spoiler-safe</Eyebrow>
+          <SectionTitle>The art keeps pace with your reading.</SectionTitle>
           <p
             className="mt-4 max-w-[620px] text-[15px] leading-relaxed"
             style={{ color: "var(--silver)" }}
           >
-            Set your current chapter and everything stays behind a gate until
-            you get there. Nothing ahead leaks — by design, enforced on the
-            server.
+            Set your current chapter and everything stays behind a gate until you
+            reach it. Nothing ahead leaks — by design, enforced on the server.
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -334,8 +332,8 @@ export default function Home() {
                 className="mt-1.5 text-[13.5px] leading-relaxed"
                 style={{ color: "var(--muted)" }}
               >
-                Talk about what you&apos;ve read with people at the same point
-                in the story. No future-chapter ambushes.
+                Talk with people at the same point in the story. No
+                future-chapter ambushes.
               </p>
             </Card>
             <Card>
@@ -344,14 +342,78 @@ export default function Home() {
                 className="mt-3 text-[15px] font-semibold"
                 style={{ color: "var(--silver-bright)" }}
               >
-                Reader-led curation
+                Curated by readers
               </p>
               <p
                 className="mt-1.5 text-[13.5px] leading-relaxed"
                 style={{ color: "var(--muted)" }}
               >
-                Volunteer mods tag every piece to the right chapter, so the
-                spoiler gate stays accurate and the library keeps growing.
+                Volunteer mods tie every piece to the right chapter, so the gate
+                stays accurate and the library keeps growing.
+              </p>
+            </Card>
+          </div>
+        </section>
+
+        {/* ---------------- Community showcase ---------------- */}
+        <section className="pt-20">
+          <Eyebrow>built by the community</Eyebrow>
+          <SectionTitle>A platform for the people who love books.</SectionTitle>
+          <p
+            className="mt-4 max-w-[620px] text-[15px] leading-relaxed"
+            style={{ color: "var(--silver)" }}
+          >
+            marginalia exists to showcase independent artists and authors — and
+            to give every reader a spoiler-safe way to enjoy their work.
+          </p>
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+            <Card>
+              <FeatureIcon kind="palette" />
+              <p
+                className="mt-3 text-[15px] font-semibold"
+                style={{ color: "var(--silver-bright)" }}
+              >
+                For artists
+              </p>
+              <p
+                className="mt-1.5 text-[13.5px] leading-relaxed"
+                style={{ color: "var(--muted)" }}
+              >
+                A platform to show your work — credited, tied to the right
+                chapter, and found by readers who are looking for exactly it.
+              </p>
+            </Card>
+            <Card>
+              <FeatureIcon kind="book" />
+              <p
+                className="mt-3 text-[15px] font-semibold"
+                style={{ color: "var(--silver-bright)" }}
+              >
+                For authors
+              </p>
+              <p
+                className="mt-1.5 text-[13.5px] leading-relaxed"
+                style={{ color: "var(--muted)" }}
+              >
+                Gather all the art for your book in one place — a spoiler-safe
+                home indie authors can send their readers to.
+              </p>
+            </Card>
+            <Card>
+              <FeatureIcon kind="eye" />
+              <p
+                className="mt-3 text-[15px] font-semibold"
+                style={{ color: "var(--silver-bright)" }}
+              >
+                For readers
+              </p>
+              <p
+                className="mt-1.5 text-[13.5px] leading-relaxed"
+                style={{ color: "var(--muted)" }}
+              >
+                Discover art and join discussions about your current read,
+                without a single page of what&apos;s coming next.
               </p>
             </Card>
           </div>
@@ -366,74 +428,9 @@ export default function Home() {
             style={{ color: "var(--silver)" }}
           >
             Know a series inside out? Become a mod and build the spoiler-safe
-            space you wish existed — chapter by chapter, for everyone reading
-            after you.
+            space you wish existed — adding books, placing art at the right
+            chapter, and keeping discussions welcoming.
           </p>
-
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <FeatureIcon kind="layers" />
-              <p
-                className="mt-3 text-[14.5px] font-semibold"
-                style={{ color: "var(--silver-bright)" }}
-              >
-                Create chapter spaces
-              </p>
-              <p
-                className="mt-1.5 text-[13px] leading-relaxed"
-                style={{ color: "var(--muted)" }}
-              >
-                Set up a home for each chapter where art and notes can live.
-              </p>
-            </Card>
-            <Card>
-              <FeatureIcon kind="tag" />
-              <p
-                className="mt-3 text-[14.5px] font-semibold"
-                style={{ color: "var(--silver-bright)" }}
-              >
-                Tag art and visuals
-              </p>
-              <p
-                className="mt-1.5 text-[13px] leading-relaxed"
-                style={{ color: "var(--muted)" }}
-              >
-                Place each piece at the right chapter so the gate stays honest.
-              </p>
-            </Card>
-            <Card>
-              <FeatureIcon kind="shield" />
-              <p
-                className="mt-3 text-[14.5px] font-semibold"
-                style={{ color: "var(--silver-bright)" }}
-              >
-                Guide spoiler-safe discussions
-              </p>
-              <p
-                className="mt-1.5 text-[13px] leading-relaxed"
-                style={{ color: "var(--muted)" }}
-              >
-                Keep conversations welcoming and free of future-chapter leaks.
-              </p>
-            </Card>
-            <Card>
-              <FeatureIcon kind="growth" />
-              <p
-                className="mt-3 text-[14.5px] font-semibold"
-                style={{ color: "var(--silver-bright)" }}
-              >
-                Help grow the library
-              </p>
-              <p
-                className="mt-1.5 text-[13px] leading-relaxed"
-                style={{ color: "var(--muted)" }}
-              >
-                Add the books you love and bring new readers in safely.
-              </p>
-            </Card>
-          </div>
-
-          <CtaPair className="mt-8" />
         </section>
 
         {/* ---------------- How it works ---------------- */}
@@ -456,7 +453,7 @@ export default function Home() {
               {
                 n: "3",
                 t: "Explore safely",
-                d: "Browse art, notes, recaps, and discussions — all locked to where you are.",
+                d: "Browse art and discussions — all locked to where you are.",
               },
             ].map((step) => (
               <Card key={step.n}>
@@ -483,6 +480,60 @@ export default function Home() {
                   {step.d}
                 </p>
               </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* ---------------- FAQ ---------------- */}
+        <section id="faq" className="scroll-mt-24 pt-20">
+          <Eyebrow>questions</Eyebrow>
+          <SectionTitle>Frequently asked.</SectionTitle>
+
+          <div className="mt-8 flex flex-col gap-3">
+            {FAQS.map((f) => (
+              <details
+                key={f.q}
+                className="group rounded-[var(--radius)] p-5"
+                style={{
+                  border: "1px solid var(--line)",
+                  background: "rgba(27,25,37,.55)",
+                }}
+              >
+                <summary
+                  className="flex cursor-pointer list-none items-center justify-between gap-4 text-[15px] font-semibold"
+                  style={{ color: "var(--silver-bright)" }}
+                >
+                  {f.q}
+                  <span
+                    className="transition-transform group-open:rotate-45"
+                    style={{ color: "var(--ember-soft)" }}
+                    aria-hidden
+                  >
+                    <PlusIcon />
+                  </span>
+                </summary>
+                <p
+                  className="mt-3 text-[14px] leading-relaxed"
+                  style={{ color: "var(--muted)" }}
+                >
+                  {f.q.startsWith("I'm an artist or author and I don't") ? (
+                    <>
+                      Just let us know and we&apos;ll take it down promptly —
+                      email{" "}
+                      <a
+                        href="mailto:peterfaison@gmail.com"
+                        className="underline"
+                        style={{ color: "var(--ember-soft)" }}
+                      >
+                        peterfaison@gmail.com
+                      </a>
+                      .
+                    </>
+                  ) : (
+                    f.a
+                  )}
+                </p>
+              </details>
             ))}
           </div>
         </section>
@@ -534,6 +585,24 @@ function LockIcon() {
   );
 }
 
+function PlusIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+
 function IconFrame({
   children,
   tone = "ember",
@@ -573,38 +642,15 @@ function Svg({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ProblemIcon({ kind }: { kind: "search" | "art" | "chat" }) {
-  return (
-    <IconFrame tone="ember">
-      {kind === "search" ? (
-        <Svg>
-          <circle cx="11" cy="11" r="7" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </Svg>
-      ) : kind === "art" ? (
-        <Svg>
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <circle cx="9" cy="9" r="2" />
-          <path d="M21 15l-5-5L5 21" />
-        </Svg>
-      ) : (
-        <Svg>
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </Svg>
-      )}
-    </IconFrame>
-  );
-}
-
 function FeatureIcon({
   kind,
 }: {
-  kind: "lock" | "shield" | "people" | "layers" | "tag" | "growth";
+  kind: "lock" | "shield" | "people" | "palette" | "book" | "eye";
 }) {
   const tone =
-    kind === "lock" || kind === "layers"
+    kind === "lock"
       ? "violet"
-      : kind === "people" || kind === "growth"
+      : kind === "people" || kind === "book"
         ? "flame"
         : "ember";
   return (
@@ -624,21 +670,23 @@ function FeatureIcon({
           <circle cx="9" cy="7" r="4" />
           <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
         </Svg>
-      ) : kind === "layers" ? (
+      ) : kind === "palette" ? (
         <Svg>
-          <polygon points="12 2 2 7 12 12 22 7 12 2" />
-          <polyline points="2 17 12 22 22 17" />
-          <polyline points="2 12 12 17 22 12" />
+          <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+          <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+          <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+          <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+          <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.012 17.5 2 12 2z" />
         </Svg>
-      ) : kind === "tag" ? (
+      ) : kind === "book" ? (
         <Svg>
-          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-          <line x1="7" y1="7" x2="7.01" y2="7" />
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
         </Svg>
       ) : (
         <Svg>
-          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-          <polyline points="17 6 23 6 23 12" />
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+          <circle cx="12" cy="12" r="3" />
         </Svg>
       )}
     </IconFrame>

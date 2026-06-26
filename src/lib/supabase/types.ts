@@ -8,12 +8,13 @@ export type NotificationKind =
   | "art_approved"
   | "art_rejected"
   | "reply_thread"
-  | "reply_comment";
+  | "reply_comment"
+  | "mod_granted";
 
 export type VoteTarget = "thread" | "comment";
 
 // Who an applicant says they are, on the "apply to be a mod" form.
-export type ModApplicantRole = "book_artist" | "artist_or_author" | "reader";
+export type ModApplicantRole = "artist" | "author" | "reader";
 
 export type Database = {
   public: {
@@ -379,6 +380,10 @@ export type Database = {
       };
       ensure_chapter_thread: {
         Args: { cid: string };
+        Returns: string;
+      };
+      accept_mod_application: {
+        Args: { app_id: string };
         Returns: string;
       };
       books_art_counts: {

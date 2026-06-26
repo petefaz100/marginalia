@@ -55,7 +55,7 @@ export function ArtCarousel({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={current.image_url}
-          alt={current.title ?? "Fan art"}
+          alt={current.title ?? "Art"}
           className="max-h-[60vh] w-full object-contain"
         />
         {current.status !== "approved" ? (

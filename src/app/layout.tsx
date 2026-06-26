@@ -31,7 +31,56 @@ export const metadata: Metadata = {
     template: "%s · marginalia",
   },
   description:
-    "A spoiler-safe reading companion — share book art chapter by chapter, with everything past your current chapter kept hidden until you mark it read.",
+    "A community-driven, spoiler-safe reading companion. Discover art and discussion around the books you love — championing independent artists and authors — revealed only as far as you've read.",
+  keywords: [
+    "book art",
+    "spoiler-safe",
+    "indie authors",
+    "independent artists",
+    "reading community",
+    "chapter by chapter",
+    "book illustrations",
+    "book discussions",
+  ],
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "marginalia",
+    url: "https://www.marginaliaart.com",
+    title: "marginalia — a community home for book art, without spoilers",
+    description:
+      "Discover art and discussion around the books you love — championing independent artists and authors — revealed only as far as you've read.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "marginalia — a community home for book art, without spoilers",
+    description:
+      "Discover art and discussion around the books you love — revealed only as far as you've read.",
+  },
+};
+
+// Site-wide structured data: identifies the site and brand to search engines
+// and AI answer-engines so they can attribute and surface it correctly.
+const siteJsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://www.marginaliaart.com/#website",
+      url: "https://www.marginaliaart.com",
+      name: "marginalia",
+      description:
+        "A community-driven, spoiler-safe reading companion for the art and discussion around the books you love.",
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://www.marginaliaart.com/#org",
+      name: "marginalia",
+      url: "https://www.marginaliaart.com",
+      logo: "https://www.marginaliaart.com/opengraph-image.png",
+      email: "peterfaison@gmail.com",
+    },
+  ],
 };
 
 export default function RootLayout({
@@ -44,7 +93,13 @@ export default function RootLayout({
       lang="en"
       className={`${fraunces.variable} ${mulish.variable} ${splineMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
+        />
+        {children}
+      </body>
     </html>
   );
 }

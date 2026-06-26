@@ -5,9 +5,9 @@ import type { ModApplicantRole } from "@/lib/supabase/types";
 import { submitApplication } from "./actions";
 
 const ROLE_OPTIONS: { value: ModApplicantRole; label: string }[] = [
-  { value: "book_artist", label: "A book artist" },
-  { value: "artist_or_author", label: "An artist or an author" },
-  { value: "reader", label: "A reader" },
+  { value: "artist", label: "Artist" },
+  { value: "author", label: "Author" },
+  { value: "reader", label: "Reader" },
 ];
 
 const inputStyle = {

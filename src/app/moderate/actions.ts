@@ -100,9 +100,49 @@ export async function dismissReport(reportId: string) {
   revalidatePath("/moderate");
 }
 
-// Clears a "become a mod" application off the queue once a mod has handled it
-// (reached out, or decided to pass). RLS lets only mods delete applications.
-export async function dismissApplication(applicationId: string) {
+// Accept a "become a mod" application. The heavy lifting is in the
+// accept_mod_application() Postgres function (SECURITY DEFINER): it matches the
+// applicant's email to an account, makes that profile a mod, notifies them, and
+// clears the application. We surface its status so the queue can explain the
+// one case that can't auto-resolve: nobody has signed up with that email yet.
+export async function acceptApplication(
+  applicationId: string,
+): Promise<{ ok: boolean; message: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "You must be signed in." };
+
+  const { data: isMod } = await supabase.rpc("is_mod");
+  if (!isMod) return { ok: false, message: "Mods only." };
+
+  if (!applicationId) return { ok: false, message: "Missing application." };
+
+  const { data: status, error } = await supabase.rpc("accept_mod_application", {
+    app_id: applicationId,
+  });
+  if (error) return { ok: false, message: error.message };
+
+  if (status === "no_account") {
+    return {
+      ok: false,
+      message:
+        "No account uses that email yet. Ask them to sign in once, then accept again.",
+    };
+  }
+  if (status === "not_found") {
+    return { ok: false, message: "That application no longer exists." };
+  }
+
+  revalidatePath("/moderate");
+  revalidatePath("/inbox");
+  return { ok: true, message: "Accepted — they now have mod abilities." };
+}
+
+// Reject a "become a mod" application: just remove it from the queue. RLS lets
+// only mods delete applications.
+export async function rejectApplication(applicationId: string) {
   const supabase = await createClient();
   const {
     data: { user },

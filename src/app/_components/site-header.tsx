@@ -168,21 +168,22 @@ export async function SiteHeader() {
     isMod = profile?.is_mod ?? false;
     needsUsername = !profile?.username;
 
+    // Everyone gets their unread inbox count (mods too — that's where the
+    // "you're now a mod" welcome lands). head:true skips returning rows.
+    const { count: unreadCount } = await supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("recipient_id", user.id)
+      .is("read_at", null);
+    unread = unreadCount ?? 0;
+
     if (isMod) {
-      // Mods get a badge with how many pieces are waiting in the queue.
+      // Mods also get a badge with how many pieces are waiting in the queue.
       const { count } = await supabase
         .from("artworks")
         .select("id", { count: "exact", head: true })
         .eq("status", "pending");
       pendingCount = count ?? 0;
-    } else {
-      // Readers get a badge with their unread inbox count. head:true skips rows.
-      const { count } = await supabase
-        .from("notifications")
-        .select("id", { count: "exact", head: true })
-        .eq("recipient_id", user.id)
-        .is("read_at", null);
-      unread = count ?? 0;
     }
   }
 
@@ -208,19 +209,8 @@ export async function SiteHeader() {
         </span>
       </Link>
 
-      {/* Center nav — desktop only; mobile reaches these via the page itself */}
-      <nav className="hidden items-center gap-6 md:flex">
-        <Link
-          href="/library"
-          className="text-[13.5px] font-semibold transition-colors hover:text-[var(--silver-bright)]"
-          style={{ color: "var(--silver)" }}
-        >
-          Library
-        </Link>
-      </nav>
-
       <div className="flex items-center gap-2">
-        {user && !isMod ? (
+        {user ? (
           <Link
             href="/inbox"
             className="relative grid h-10 w-10 place-items-center rounded-[13px]"

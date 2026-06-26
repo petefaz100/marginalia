@@ -181,6 +181,56 @@ export default async function InboxPage() {
                 );
               }
 
+              // Mod granted: this reader's application was accepted and they
+              // now have mod abilities (including the moderation queue).
+              if (n.kind === "mod_granted") {
+                return (
+                  <li
+                    key={n.id}
+                    className="flex gap-3 rounded-[var(--radius-sm)] p-3"
+                    style={{
+                      border: `1px solid ${unread ? "var(--ember)" : "var(--line)"}`,
+                      background: "var(--obsidian-2)",
+                    }}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className="text-[11px] tracking-[.12em] uppercase"
+                        style={{ color: "var(--ember-soft)" }}
+                      >
+                        Mod access
+                        <span
+                          className="ml-2 tracking-normal normal-case"
+                          style={{ color: "var(--muted)" }}
+                        >
+                          {timeAgo(n.created_at)}
+                        </span>
+                      </p>
+                      <p
+                        className="mt-1 text-[13.5px] font-semibold"
+                        style={{ color: "var(--silver-bright)" }}
+                      >
+                        You&apos;re now a mod — welcome to the team.
+                      </p>
+                      <p
+                        className="mt-0.5 text-[12.5px]"
+                        style={{ color: "var(--silver)" }}
+                      >
+                        You can review submitted art and applications from the
+                        moderation queue.
+                      </p>
+                      <Link
+                        href="/moderate"
+                        className="mt-1 inline-block text-[12.5px] underline"
+                        style={{ color: "var(--ember-soft)" }}
+                      >
+                        Open the queue
+                      </Link>
+                    </div>
+                  </li>
+                );
+              }
+
               const approved = n.kind === "art_approved";
               const title = n.art_title || "Untitled";
               return (

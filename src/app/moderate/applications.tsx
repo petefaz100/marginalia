@@ -1,8 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import type { ModApplicantRole } from "@/lib/supabase/types";
-import { dismissApplication } from "./actions";
+import { acceptApplication, rejectApplication } from "./actions";
 
 export type ApplicationItem = {
   id: string;
@@ -14,22 +14,39 @@ export type ApplicationItem = {
 };
 
 const ROLE_LABEL: Record<ModApplicantRole, string> = {
-  book_artist: "Book artist",
-  artist_or_author: "Artist or author",
+  artist: "Artist",
+  author: "Author",
   reader: "Reader",
 };
 
 // The "become a mod" applications queue. Each card shows who applied, how to
-// reach them, what they said, and a single "Mark handled" control that clears
-// the application once a mod has followed up.
+// reach them, and what they said. Accepting grants mod abilities to the account
+// with the matching email and notifies them; rejecting clears the application.
 export function ApplicationsQueue({ items }: { items: ApplicationItem[] }) {
   const [pending, startTransition] = useTransition();
+  // Per-application error (e.g. "no account with that email yet").
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   if (items.length === 0) return null;
 
-  function handled(id: string) {
+  function accept(id: string) {
     startTransition(async () => {
-      await dismissApplication(id);
+      const res = await acceptApplication(id);
+      if (!res.ok) {
+        setErrors((e) => ({ ...e, [id]: res.message }));
+      } else {
+        setErrors((e) => {
+          const next = { ...e };
+          delete next[id];
+          return next;
+        });
+      }
+    });
+  }
+
+  function reject(id: string) {
+    startTransition(async () => {
+      await rejectApplication(id);
     });
   }
 
@@ -75,24 +92,41 @@ export function ApplicationsQueue({ items }: { items: ApplicationItem[] }) {
             >
               {item.reason}
             </p>
+            {errors[item.id] ? (
+              <p
+                className="mt-2 text-[12.5px]"
+                style={{ color: "var(--wine-soft)" }}
+              >
+                {errors[item.id]}
+              </p>
+            ) : null}
           </div>
 
           <div
-            className="flex justify-end px-3.5 pb-3.5"
+            className="flex gap-2 px-3.5 pb-3.5"
             style={{ borderTop: "1px solid var(--line)", paddingTop: 14 }}
           >
             <button
               type="button"
               disabled={pending}
-              onClick={() => handled(item.id)}
+              onClick={() => accept(item.id)}
+              className="h-9 rounded-full px-4 text-[12.5px] font-semibold disabled:opacity-50"
+              style={{ background: "var(--ember)", color: "#fff" }}
+            >
+              {pending ? "Working…" : "Accept"}
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => reject(item.id)}
               className="h-9 rounded-full px-4 text-[12.5px] font-semibold disabled:opacity-50"
               style={{
                 border: "1px solid var(--line-2)",
                 background: "var(--obsidian-3)",
-                color: "var(--silver)",
+                color: "var(--wine-soft)",
               }}
             >
-              {pending ? "Clearing…" : "Mark handled"}
+              Reject
             </button>
           </div>
         </li>

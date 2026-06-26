@@ -109,7 +109,7 @@ const ALLOWED_IMAGE_TYPES: Record<string, string> = {
 };
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB — matches next.config's body limit.
 
-// Adds a piece of fan art tagged to a chapter. The image file is stored in the
+// Adds a piece of art tagged to a chapter. The image file is stored in the
 // 'art' storage bucket. A regular reader's piece is created as 'pending' so a
 // mod approves it before others can see it; a MODERATOR's piece is created as
 // 'approved' and appears immediately (mods don't review their own work). The
