@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { moderateArt } from "./actions";
+import { REJECT_REASONS } from "./reasons";
 
 export type QueueItem = {
   id: string;
@@ -14,18 +15,6 @@ export type QueueItem = {
   chapterLabel: string;
   uploader: string;
 };
-
-// Default rejection reasons a mod can pick. The chosen one (plus an optional
-// note) is stored on the notification so the uploader learns why.
-const REJECT_REASONS = [
-  "Spoiler — tagged to the wrong chapter",
-  "Doesn't match this book or chapter",
-  "Low image quality or too small",
-  "Missing source or artist credit",
-  "Duplicate of art already posted",
-  "Inappropriate or off-topic",
-  "Other (see note)",
-];
 
 export function ModerationQueue({ items }: { items: QueueItem[] }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());

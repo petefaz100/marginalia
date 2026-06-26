@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SiteHeader } from "../_components/site-header";
 import { ModerationQueue, type QueueItem } from "./queue";
+import { ReportedQueue, type ReportItem } from "./reported";
 
 export const metadata = { title: "Moderation" };
 
@@ -27,16 +28,61 @@ export default async function ModeratePage() {
     .order("created_at", { ascending: true });
   const pending = pendingRows ?? [];
 
-  // Resolve book titles, chapter labels, and uploader names in batched lookups.
-  const bookIds = [...new Set(pending.map((a) => a.book_id))];
-  const chapterIds = [...new Set(pending.map((a) => a.chapter_id))];
-  const uploaderIds = [
-    ...new Set(pending.map((a) => a.uploaded_by).filter(Boolean) as string[]),
+  // Reader-filed reports (only mods can read these, per RLS).
+  const { data: reportRows } = await supabase
+    .from("reports")
+    .select("id, artwork_id, reported_by, reason, created_at")
+    .order("created_at", { ascending: true });
+  const reports = reportRows ?? [];
+
+  // Pull the reported artworks' details in one lookup.
+  const reportedArtIds = [...new Set(reports.map((r) => r.artwork_id))];
+  const reportedArt = new Map<
+    string,
+    {
+      id: string;
+      book_id: string;
+      chapter_id: string;
+      image_url: string;
+      title: string | null;
+      uploaded_by: string | null;
+    }
+  >();
+  if (reportedArtIds.length > 0) {
+    const { data: arts } = await supabase
+      .from("artworks")
+      .select("id, book_id, chapter_id, image_url, title, uploaded_by")
+      .in("id", reportedArtIds);
+    for (const a of arts ?? []) reportedArt.set(a.id, a);
+  }
+
+  // Resolve book titles, chapter labels, and people's names in batched lookups
+  // that cover both queues.
+  const bookIds = [
+    ...new Set([
+      ...pending.map((a) => a.book_id),
+      ...[...reportedArt.values()].map((a) => a.book_id),
+    ]),
+  ];
+  const chapterIds = [
+    ...new Set([
+      ...pending.map((a) => a.chapter_id),
+      ...[...reportedArt.values()].map((a) => a.chapter_id),
+    ]),
+  ];
+  const personIds = [
+    ...new Set(
+      [
+        ...pending.map((a) => a.uploaded_by),
+        ...[...reportedArt.values()].map((a) => a.uploaded_by),
+        ...reports.map((r) => r.reported_by),
+      ].filter(Boolean) as string[],
+    ),
   ];
 
   const bookTitle = new Map<string, string>();
   const chapterLabel = new Map<string, string>();
-  const uploaderName = new Map<string, string>();
+  const personName = new Map<string, string>();
 
   if (bookIds.length > 0) {
     const { data: books } = await supabase
@@ -57,13 +103,13 @@ export default async function ModeratePage() {
       );
     }
   }
-  if (uploaderIds.length > 0) {
+  if (personIds.length > 0) {
     const { data: profiles } = await supabase
       .from("profiles")
       .select("id, handle, display_name")
-      .in("id", uploaderIds);
+      .in("id", personIds);
     for (const p of profiles ?? []) {
-      uploaderName.set(p.id, p.display_name || p.handle || "a reader");
+      personName.set(p.id, p.display_name || p.handle || "a reader");
     }
   }
 
@@ -77,9 +123,32 @@ export default async function ModeratePage() {
     bookTitle: bookTitle.get(a.book_id) ?? "Unknown book",
     chapterLabel: chapterLabel.get(a.chapter_id) ?? "Unknown chapter",
     uploader: a.uploaded_by
-      ? (uploaderName.get(a.uploaded_by) ?? "a reader")
+      ? (personName.get(a.uploaded_by) ?? "a reader")
       : "a reader",
   }));
+
+  // Build reported items, skipping any whose artwork has since vanished.
+  const reported: ReportItem[] = [];
+  for (const r of reports) {
+    const art = reportedArt.get(r.artwork_id);
+    if (!art) continue;
+    reported.push({
+      reportId: r.id,
+      artworkId: art.id,
+      bookId: art.book_id,
+      imageUrl: art.image_url,
+      title: art.title,
+      uploader: art.uploaded_by
+        ? (personName.get(art.uploaded_by) ?? "a reader")
+        : "a reader",
+      reporter: r.reported_by
+        ? (personName.get(r.reported_by) ?? "a reader")
+        : "a reader",
+      reportReason: r.reason,
+      bookTitle: bookTitle.get(art.book_id) ?? "Unknown book",
+      chapterLabel: chapterLabel.get(art.chapter_id) ?? "Unknown chapter",
+    });
+  }
 
   return (
     <div
@@ -113,6 +182,24 @@ export default async function ModeratePage() {
         </p>
 
         <ModerationQueue items={items} />
+
+        {/* Reported art */}
+        <section className="mt-10">
+          <h2
+            className="font-display text-[20px] leading-tight font-medium"
+            style={{ color: "var(--silver-bright)" }}
+          >
+            Reported art
+          </h2>
+          <p className="mt-1 mb-5 text-[13px]" style={{ color: "var(--muted)" }}>
+            {reported.length === 0
+              ? "No open reports."
+              : `${reported.length} ${
+                  reported.length === 1 ? "report" : "reports"
+                } from readers. Remove the art or dismiss the report.`}
+          </p>
+          <ReportedQueue items={reported} />
+        </section>
 
         <Link
           href="/"

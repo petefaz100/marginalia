@@ -3,27 +3,10 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SiteHeader } from "../../_components/site-header";
 import { CoverArt } from "../../_components/cover-art";
-import { addChapter, setReadThrough } from "../actions";
-import { ArtGallery, type GalleryArt } from "../../_components/art-gallery";
+import { addChapter } from "../actions";
+import { type GalleryArt } from "../../_components/art-gallery";
 import { ArtUpload } from "../../_components/art-upload";
-
-function LockIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  );
-}
+import { ChapterSection } from "./chapter-section";
 
 export async function generateMetadata({
   params,
@@ -99,7 +82,6 @@ export default async function BookPage({
 
   const nextNumber =
     chapters.length > 0 ? chapters[chapters.length - 1].number + 1 : 1;
-  const firstLockedIndex = chapters.findIndex((c) => c.number > readThrough);
 
   return (
     <div
@@ -160,39 +142,11 @@ export default async function BookPage({
               Add a chapter below, then mark it read to start revealing art.
             </p>
           ) : (
-            <>
-              <p className="mb-2.5 text-[13px]" style={{ color: "var(--silver)" }}>
-                {readThrough > 0
-                  ? `You've read through chapter ${readThrough}.`
-                  : "You haven't marked any chapters read yet."}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {[{ number: 0 }, ...chapters].map((c) => {
-                  const selected = c.number === readThrough;
-                  return (
-                    <form action={setReadThrough} key={c.number}>
-                      <input type="hidden" name="bookId" value={book.id} />
-                      <input type="hidden" name="through" value={c.number} />
-                      <button
-                        type="submit"
-                        className="h-9 rounded-full px-3 text-[12.5px] font-semibold"
-                        style={
-                          selected
-                            ? { background: "var(--ember)", color: "#fff" }
-                            : {
-                                border: "1px solid var(--line)",
-                                background: "var(--obsidian-2)",
-                                color: "var(--silver)",
-                              }
-                        }
-                      >
-                        {c.number === 0 ? "Not started" : `Ch. ${c.number}`}
-                      </button>
-                    </form>
-                  );
-                })}
-              </div>
-            </>
+            <p className="text-[13px]" style={{ color: "var(--silver)" }}>
+              {readThrough > 0
+                ? `You've read through chapter ${readThrough}. Use the ✓ button on a chapter below to move your place.`
+                : "You haven't marked any chapters read yet — tap the circle on the left of a chapter below to reveal its art."}
+            </p>
           )}
         </section>
 
@@ -205,115 +159,13 @@ export default async function BookPage({
             Chapters
           </h2>
 
-          {chapters.length === 0 ? (
-            <p
-              className="mb-4 text-[13px]"
-              style={{ color: "var(--muted)" }}
-            >
-              No chapters yet.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-2.5">
-              {chapters.map((ch, i) => {
-                const unlocked = ch.number <= readThrough;
-                const chapterArt = artByChapter.get(ch.id) ?? [];
-                const count = chapterArt.length;
-                return (
-                  <li key={ch.id}>
-                    {i === firstLockedIndex ? (
-                      <div
-                        className="mb-2.5 flex items-center gap-2 text-[11px] tracking-[.14em] uppercase"
-                        style={{ color: "var(--wine-soft)" }}
-                      >
-                        <span
-                          className="h-px flex-1"
-                          style={{ background: "var(--line-2)" }}
-                        />
-                        spoilers beyond here
-                        <span
-                          className="h-px flex-1"
-                          style={{ background: "var(--line-2)" }}
-                        />
-                      </div>
-                    ) : null}
-                    <div
-                      className="rounded-[var(--radius-sm)] p-3.5"
-                      style={{
-                        border: "1px solid var(--line)",
-                        background: "var(--obsidian-2)",
-                        opacity: unlocked ? 1 : 0.7,
-                      }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className="grid h-8 w-8 shrink-0 place-items-center rounded-full font-mono text-[12px] font-semibold"
-                          style={{
-                            border: "1px solid var(--line-2)",
-                            background: "var(--obsidian-3)",
-                            color: unlocked
-                              ? "var(--ember-soft)"
-                              : "var(--muted-2)",
-                          }}
-                        >
-                          {ch.number}
-                        </span>
-                        <span
-                          className="min-w-0 flex-1 truncate text-[14px] font-semibold"
-                          style={{ color: "var(--silver-bright)" }}
-                        >
-                          {ch.title || `Chapter ${ch.number}`}
-                        </span>
-                        {unlocked ? (
-                          <span
-                            className="shrink-0 text-[12px]"
-                            style={{ color: "var(--muted)" }}
-                          >
-                            {count > 0
-                              ? `${count} ${count === 1 ? "piece" : "pieces"}`
-                              : "No art yet"}
-                          </span>
-                        ) : (
-                          <span
-                            className="flex shrink-0 items-center gap-1.5 text-[12px]"
-                            style={{ color: "var(--muted-2)" }}
-                          >
-                            <LockIcon />
-                            Locked
-                          </span>
-                        )}
-                      </div>
-
-                      {unlocked && chapterArt.length > 0 ? (
-                        <ArtGallery art={chapterArt} />
-                      ) : null}
-
-                      {!unlocked && user ? (
-                        <form action={setReadThrough} className="mt-3">
-                          <input type="hidden" name="bookId" value={book.id} />
-                          <input
-                            type="hidden"
-                            name="through"
-                            value={ch.number}
-                          />
-                          <button
-                            type="submit"
-                            className="h-8 rounded-full px-3 text-[12px] font-semibold"
-                            style={{
-                              border: "1px solid var(--line-2)",
-                              background: "var(--obsidian-3)",
-                              color: "var(--ember-soft)",
-                            }}
-                          >
-                            Mark read to here
-                          </button>
-                        </form>
-                      ) : null}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          <ChapterSection
+            bookId={book.id}
+            chapters={chapters}
+            readThrough={readThrough}
+            artByChapter={Object.fromEntries(artByChapter)}
+            signedIn={!!user}
+          />
 
           {/* Add a chapter */}
           {user ? (

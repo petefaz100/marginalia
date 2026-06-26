@@ -26,11 +26,13 @@ export default async function InboxPage() {
   } = await supabase.auth.getUser();
   if (!user) notFound();
 
-  // RLS limits this to the reader's own notifications.
+  // RLS limits this to the reader's own notifications. The art's title/image and
+  // book are stored on the notification itself, so a rejected (deleted) piece
+  // still shows a thumbnail here.
   const { data: rows } = await supabase
     .from("notifications")
     .select(
-      "id, kind, reason, note, read_at, created_at, artwork:artworks(id, title, book_id, image_url)",
+      "id, kind, reason, note, art_title, art_image_url, book_id, read_at, created_at",
     )
     .order("created_at", { ascending: false });
 
@@ -70,10 +72,9 @@ export default async function InboxPage() {
         {notifications.length > 0 ? (
           <ul className="flex flex-col gap-3">
             {notifications.map((n) => {
-              const art = Array.isArray(n.artwork) ? n.artwork[0] : n.artwork;
               const approved = n.kind === "art_approved";
               const unread = !n.read_at;
-              const title = art?.title || "Untitled";
+              const title = n.art_title || "Untitled";
               return (
                 <li
                   key={n.id}
@@ -83,10 +84,10 @@ export default async function InboxPage() {
                     background: "var(--obsidian-2)",
                   }}
                 >
-                  {art?.image_url ? (
+                  {n.art_image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={art.image_url}
+                      src={n.art_image_url}
                       alt=""
                       className="h-14 w-14 flex-none rounded-[8px] object-cover"
                       style={{ background: "var(--obsidian-3)" }}
@@ -133,13 +134,13 @@ export default async function InboxPage() {
                         {n.note}
                       </p>
                     ) : null}
-                    {art?.book_id ? (
+                    {approved && n.book_id ? (
                       <Link
-                        href={`/books/${art.book_id}`}
+                        href={`/books/${n.book_id}`}
                         className="mt-1 inline-block text-[12.5px] underline"
                         style={{ color: "var(--ember-soft)" }}
                       >
-                        {approved ? "View on the book page" : "Go to the book"}
+                        View on the book page
                       </Link>
                     ) : null}
                   </div>

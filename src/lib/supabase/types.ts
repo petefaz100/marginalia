@@ -183,6 +183,9 @@ export type Database = {
           artwork_id: string | null;
           reason: string | null;
           note: string | null;
+          art_title: string | null;
+          art_image_url: string | null;
+          book_id: string | null;
           read_at: string | null;
           created_at: string;
         };
@@ -193,6 +196,9 @@ export type Database = {
           artwork_id?: string | null;
           reason?: string | null;
           note?: string | null;
+          art_title?: string | null;
+          art_image_url?: string | null;
+          book_id?: string | null;
           read_at?: string | null;
           created_at?: string;
         };
@@ -203,6 +209,9 @@ export type Database = {
           artwork_id?: string | null;
           reason?: string | null;
           note?: string | null;
+          art_title?: string | null;
+          art_image_url?: string | null;
+          book_id?: string | null;
           read_at?: string | null;
           created_at?: string;
         };
