@@ -110,15 +110,16 @@ function BookCard({
         className="relative mb-2 aspect-[2/3] w-full overflow-hidden rounded-[var(--radius-sm)]"
         style={{ border: "1px solid var(--line)", background: "var(--obsidian-2)" }}
       >
-        <CoverArt url={book.cover_url} title={book.title} />
+        <div
+          className="h-full w-full"
+          style={empty ? { filter: "grayscale(1)", opacity: 0.5 } : undefined}
+        >
+          <CoverArt url={book.cover_url} title={book.title} />
+        </div>
         {empty ? (
           <span
             className="absolute top-1.5 left-1.5 rounded-full px-2 py-0.5 text-[9.5px] font-semibold tracking-wide uppercase"
-            style={{
-              background: "rgba(19,17,25,.86)",
-              border: "1px solid var(--line-2)",
-              color: "var(--muted-2)",
-            }}
+            style={{ background: "#fff", color: "var(--ember)" }}
           >
             No art yet
           </span>

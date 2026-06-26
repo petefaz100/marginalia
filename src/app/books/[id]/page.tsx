@@ -69,10 +69,14 @@ export default async function BookPage({
   // RLS only returns art the reader is allowed to see (approved + at/below the
   // chapter they've read, plus their own uploads), so grouping the rows by
   // chapter already respects the spoiler gate.
+  // Rejected art is deleted on rejection, but we also filter it out here as a
+  // belt-and-suspenders guard so a stray rejected row could never surface in
+  // any view (chapter, gallery, or search).
   const { data: arts } = await supabase
     .from("artworks")
     .select("id, chapter_id, image_url, title, artist_handle, credit_url, status")
-    .eq("book_id", id);
+    .eq("book_id", id)
+    .neq("status", "rejected");
   const artByChapter = new Map<string, GalleryArt[]>();
   for (const a of arts ?? []) {
     const list = artByChapter.get(a.chapter_id) ?? [];
