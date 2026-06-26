@@ -31,10 +31,12 @@ export function ModerationQueue({ items }: { items: QueueItem[] }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
 
-  // When set, we're choosing a rejection reason for these artwork ids.
+  // When set, we're choosing rejection reasons for these artwork ids. Each
+  // piece gets its own reason + optional note (keyed by artwork id) so a bulk
+  // reject can explain each image individually.
   const [rejecting, setRejecting] = useState<string[] | null>(null);
-  const [reason, setReason] = useState(REJECT_REASONS[0]);
-  const [note, setNote] = useState("");
+  const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({});
 
   const allSelected = items.length > 0 && selected.size === items.length;
 
@@ -66,12 +68,16 @@ export function ModerationQueue({ items }: { items: QueueItem[] }) {
   function confirmReject() {
     const ids = rejecting;
     if (!ids || ids.length === 0) return;
+    const map: Record<string, { reason?: string; note?: string }> = {};
+    for (const id of ids) {
+      map[id] = { reason: reasons[id] ?? REJECT_REASONS[0], note: notes[id] };
+    }
     startTransition(async () => {
-      await moderateArt(ids, "rejected", bookIdsFor(ids), reason, note);
+      await moderateArt(ids, "rejected", bookIdsFor(ids), map);
       setSelected(new Set());
       setRejecting(null);
-      setNote("");
-      setReason(REJECT_REASONS[0]);
+      setReasons({});
+      setNotes({});
     });
   }
 
@@ -253,48 +259,75 @@ export function ModerationQueue({ items }: { items: QueueItem[] }) {
               className="mt-1 mb-3 text-[12.5px]"
               style={{ color: "var(--muted)" }}
             >
-              The uploader gets this reason in their inbox.
+              {rejectCount === 1
+                ? "The uploader gets this reason in their inbox."
+                : "Pick a reason for each piece — each uploader gets their own."}
             </p>
 
-            <label className="flex flex-col gap-1">
-              <span className="text-[12px]" style={{ color: "var(--silver)" }}>
-                Reason
-              </span>
-              <select
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                className="h-10 w-full rounded-[10px] px-2.5 text-[14px] outline-none"
-                style={{
-                  border: "1px solid var(--line-2)",
-                  background: "var(--obsidian-3)",
-                  color: "var(--silver-bright)",
-                }}
-              >
-                {REJECT_REASONS.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="mt-3 flex flex-col gap-1">
-              <span className="text-[12px]" style={{ color: "var(--silver)" }}>
-                Note (optional)
-              </span>
-              <textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                rows={3}
-                placeholder="Add anything that helps the uploader fix it."
-                className="w-full resize-none rounded-[10px] px-2.5 py-2 text-[14px] outline-none"
-                style={{
-                  border: "1px solid var(--line-2)",
-                  background: "var(--obsidian-3)",
-                  color: "var(--silver-bright)",
-                }}
-              />
-            </label>
+            <div className="flex max-h-[52vh] flex-col gap-3 overflow-y-auto">
+              {rejecting.map((id) => {
+                const art = items.find((i) => i.id === id);
+                if (!art) return null;
+                return (
+                  <div
+                    key={id}
+                    className="rounded-[10px] p-2.5"
+                    style={{
+                      border: "1px solid var(--line)",
+                      background: "var(--obsidian-3)",
+                    }}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={art.imageUrl}
+                        alt=""
+                        className="h-11 w-11 flex-none rounded-[7px] object-cover"
+                        style={{ background: "var(--obsidian-2)" }}
+                      />
+                      <p
+                        className="min-w-0 flex-1 truncate text-[13px] font-semibold"
+                        style={{ color: "var(--silver-bright)" }}
+                      >
+                        {art.title || "Untitled"}
+                      </p>
+                    </div>
+                    <select
+                      value={reasons[id] ?? REJECT_REASONS[0]}
+                      onChange={(e) =>
+                        setReasons((prev) => ({ ...prev, [id]: e.target.value }))
+                      }
+                      className="mt-2 h-9 w-full rounded-[8px] px-2 text-[13px] outline-none"
+                      style={{
+                        border: "1px solid var(--line-2)",
+                        background: "var(--obsidian-2)",
+                        color: "var(--silver-bright)",
+                      }}
+                    >
+                      {REJECT_REASONS.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                    <textarea
+                      value={notes[id] ?? ""}
+                      onChange={(e) =>
+                        setNotes((prev) => ({ ...prev, [id]: e.target.value }))
+                      }
+                      rows={2}
+                      placeholder="Note (optional)"
+                      className="mt-2 w-full resize-none rounded-[8px] px-2 py-1.5 text-[13px] outline-none"
+                      style={{
+                        border: "1px solid var(--line-2)",
+                        background: "var(--obsidian-2)",
+                        color: "var(--silver-bright)",
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
 
             <div className="mt-4 flex justify-end gap-2">
               <button

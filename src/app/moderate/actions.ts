@@ -10,14 +10,14 @@ import { createClient } from "@/lib/supabase/server";
 // no-op if a non-mod somehow reaches the action.
 //
 // Every decision also drops a notification into each uploader's inbox so they
-// learn the outcome. Rejections carry a reason (and optional note); approvals
-// are a simple "you're live" nudge.
+// learn the outcome. Rejections carry a per-piece reason (and optional note),
+// keyed by artwork id, so a bulk reject can give each image its own reason;
+// approvals are a simple "you're live" nudge.
 export async function moderateArt(
   artworkIds: string[],
   status: "approved" | "rejected",
   bookIds: string[] = [],
-  reason?: string,
-  note?: string,
+  reasons: Record<string, { reason?: string; note?: string }> = {},
 ) {
   const supabase = await createClient();
   const {
@@ -44,18 +44,19 @@ export async function moderateArt(
   if (error) throw new Error(error.message);
 
   // Notify each uploader (skip pieces with no uploader on record).
-  const cleanReason = reason?.trim() || null;
-  const cleanNote = note?.trim() || null;
   const kind = status === "approved" ? "art_approved" : "art_rejected";
   const rows = (targets ?? [])
     .filter((a) => a.uploaded_by)
-    .map((a) => ({
-      recipient_id: a.uploaded_by as string,
-      kind: kind as "art_approved" | "art_rejected",
-      artwork_id: a.id,
-      reason: status === "rejected" ? cleanReason : null,
-      note: status === "rejected" ? cleanNote : null,
-    }));
+    .map((a) => {
+      const r = reasons[a.id];
+      return {
+        recipient_id: a.uploaded_by as string,
+        kind: kind as "art_approved" | "art_rejected",
+        artwork_id: a.id,
+        reason: status === "rejected" ? r?.reason?.trim() || null : null,
+        note: status === "rejected" ? r?.note?.trim() || null : null,
+      };
+    });
   if (rows.length > 0) {
     // Best-effort: a failed notification shouldn't undo a completed decision.
     await supabase.from("notifications").insert(rows);

@@ -139,6 +139,7 @@ export async function SiteHeader() {
   let avatarUrl: string | null | undefined;
   let isMod = false;
   let unread = 0;
+  let pendingCount = 0;
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
@@ -150,13 +151,22 @@ export async function SiteHeader() {
     avatarUrl = profile?.avatar_url;
     isMod = profile?.is_mod ?? false;
 
-    // Unread inbox count drives the header badge. head:true skips the rows.
-    const { count } = await supabase
-      .from("notifications")
-      .select("id", { count: "exact", head: true })
-      .eq("recipient_id", user.id)
-      .is("read_at", null);
-    unread = count ?? 0;
+    if (isMod) {
+      // Mods get a badge with how many pieces are waiting in the queue.
+      const { count } = await supabase
+        .from("artworks")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+      pendingCount = count ?? 0;
+    } else {
+      // Readers get a badge with their unread inbox count. head:true skips rows.
+      const { count } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("recipient_id", user.id)
+        .is("read_at", null);
+      unread = count ?? 0;
+    }
   }
 
   return (
@@ -181,7 +191,7 @@ export async function SiteHeader() {
         </span>
       </Link>
       <div className="flex items-center gap-2">
-        {user ? (
+        {user && !isMod ? (
           <Link
             href="/inbox"
             className="relative grid h-10 w-10 place-items-center rounded-[13px]"
@@ -219,14 +229,27 @@ export async function SiteHeader() {
         {isMod ? (
           <Link
             href="/moderate"
-            className="flex h-10 items-center rounded-full px-3.5 text-[13px] font-semibold"
+            className="relative flex h-10 items-center rounded-full px-3.5 text-[13px] font-semibold"
             style={{
               border: "1px solid var(--line)",
               background: "var(--obsidian-2)",
               color: "var(--ember-soft)",
             }}
+            aria-label={
+              pendingCount > 0
+                ? `Queue (${pendingCount} waiting)`
+                : "Queue"
+            }
           >
             Queue
+            {pendingCount > 0 ? (
+              <span
+                className="absolute -top-1 -right-1 grid min-w-[18px] place-items-center rounded-full px-1 text-[10px] font-bold text-white"
+                style={{ background: "var(--ember)", height: 18 }}
+              >
+                {pendingCount > 9 ? "9+" : pendingCount}
+              </span>
+            ) : null}
           </Link>
         ) : null}
         <AuthControl signedIn={!!user} name={displayName} avatarUrl={avatarUrl} />
