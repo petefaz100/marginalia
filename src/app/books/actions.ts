@@ -46,3 +46,56 @@ export async function addBook(formData: FormData) {
 
   revalidatePath("/");
 }
+
+// Chapters are community-defined — any signed-in reader can add one. A chapter's
+// number IS the spoiler boundary: art tagged to it is hidden until a reader has
+// marked that chapter read.
+export async function addChapter(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("You must be signed in to add a chapter.");
+
+  const bookId = String(formData.get("bookId") ?? "").trim();
+  const number = Number(String(formData.get("number") ?? "").trim());
+  const title = String(formData.get("title") ?? "").trim();
+  if (!bookId) throw new Error("Missing book.");
+  if (!Number.isInteger(number) || number < 1) {
+    throw new Error("Chapter number must be a positive whole number.");
+  }
+
+  const { error } = await supabase
+    .from("chapters")
+    .insert({ book_id: bookId, number, title: title || null });
+  // 23505 = unique_violation: that chapter number already exists. Ignore so the
+  // action is idempotent rather than erroring on a duplicate add.
+  if (error && error.code !== "23505") throw new Error(error.message);
+
+  revalidatePath(`/books/${bookId}`);
+}
+
+// Records how far a reader has gotten. This is the value the RLS gate compares
+// chapter numbers against, so moving it forward reveals more art.
+export async function setReadThrough(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("You must be signed in to track progress.");
+
+  const bookId = String(formData.get("bookId") ?? "").trim();
+  const through = Number(String(formData.get("through") ?? "").trim());
+  if (!bookId) throw new Error("Missing book.");
+  if (!Number.isInteger(through) || through < 0) {
+    throw new Error("Invalid chapter.");
+  }
+
+  const { error } = await supabase.from("reading_progress").upsert(
+    { user_id: user.id, book_id: bookId, chapter_read_through: through },
+    { onConflict: "user_id,book_id" },
+  );
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/books/${bookId}`);
+}
