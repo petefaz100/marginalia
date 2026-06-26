@@ -154,6 +154,7 @@ export async function SiteHeader() {
   let needsUsername = false;
   let unread = 0;
   let pendingCount = 0;
+  let applicationsCount = 0;
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
@@ -184,8 +185,22 @@ export async function SiteHeader() {
         .select("id", { count: "exact", head: true })
         .eq("status", "pending");
       pendingCount = count ?? 0;
+
+      // The admin's Queue badge also counts waiting "become a mod" applications,
+      // since approving them is admin-only. (RLS already hides these rows from
+      // non-admin mods, so the count comes back 0 for them regardless.)
+      const { data: isAdmin } = await supabase.rpc("is_admin");
+      if (isAdmin) {
+        const { count: appCount } = await supabase
+          .from("mod_applications")
+          .select("id", { count: "exact", head: true });
+        applicationsCount = appCount ?? 0;
+      }
     }
   }
+
+  // One badge on Queue covering everything that needs a mod/admin's attention.
+  const queueCount = pendingCount + applicationsCount;
 
   return (
     <header
@@ -276,18 +291,16 @@ export async function SiteHeader() {
               color: "var(--ember-soft)",
             }}
             aria-label={
-              pendingCount > 0
-                ? `Queue (${pendingCount} waiting)`
-                : "Queue"
+              queueCount > 0 ? `Queue (${queueCount} waiting)` : "Queue"
             }
           >
             Queue
-            {pendingCount > 0 ? (
+            {queueCount > 0 ? (
               <span
                 className="absolute -top-1 -right-1 grid min-w-[18px] place-items-center rounded-full px-1 text-[10px] font-bold text-white"
                 style={{ background: "var(--ember)", height: 18 }}
               >
-                {pendingCount > 9 ? "9+" : pendingCount}
+                {queueCount > 9 ? "9+" : queueCount}
               </span>
             ) : null}
           </Link>
