@@ -195,6 +195,28 @@ export async function SiteHeader() {
         background: "transparent",
       }}
     >
+      {/* Full-bleed backdrop: the header content sits inside a centered, padded
+          column, so this layer breaks out to the full viewport width (100vw
+          centered on the header) to reach both screen edges. A soft gradient +
+          blur lets page content fade out as it scrolls underneath. */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: "50%",
+          width: "100vw",
+          transform: "translateX(-50%)",
+          background:
+            "linear-gradient(180deg, var(--obsidian) 62%, rgba(19,17,25,0))",
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
+          pointerEvents: "none",
+          zIndex: -1,
+        }}
+      />
+
       <Link href="/" className="flex min-w-0 items-center gap-2.5">
         <LeafMark />
         <span
