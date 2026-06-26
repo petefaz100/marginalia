@@ -175,6 +175,47 @@ export type Database = {
         };
         Relationships: [];
       };
+      notifications: {
+        Row: {
+          id: string;
+          recipient_id: string;
+          kind: "art_approved" | "art_rejected";
+          artwork_id: string | null;
+          reason: string | null;
+          note: string | null;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          recipient_id: string;
+          kind: "art_approved" | "art_rejected";
+          artwork_id?: string | null;
+          reason?: string | null;
+          note?: string | null;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          recipient_id?: string;
+          kind?: "art_approved" | "art_rejected";
+          artwork_id?: string | null;
+          reason?: string | null;
+          note?: string | null;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notifications_artwork_id_fkey";
+            columns: ["artwork_id"];
+            isOneToOne: false;
+            referencedRelation: "artworks";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<never, never>;
     Functions: {

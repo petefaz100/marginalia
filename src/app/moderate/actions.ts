@@ -8,10 +8,16 @@ import { createClient } from "@/lib/supabase/server";
 // the queue can approve/reject in bulk. RLS already restricts these updates to
 // mods; we re-check here to fail with a clear message rather than a silent
 // no-op if a non-mod somehow reaches the action.
+//
+// Every decision also drops a notification into each uploader's inbox so they
+// learn the outcome. Rejections carry a reason (and optional note); approvals
+// are a simple "you're live" nudge.
 export async function moderateArt(
   artworkIds: string[],
   status: "approved" | "rejected",
   bookIds: string[] = [],
+  reason?: string,
+  note?: string,
 ) {
   const supabase = await createClient();
   const {
@@ -25,11 +31,35 @@ export async function moderateArt(
   const ids = artworkIds.filter(Boolean);
   if (ids.length === 0) throw new Error("Nothing selected.");
 
+  // Grab the uploader of each piece so we can notify them after the flip.
+  const { data: targets } = await supabase
+    .from("artworks")
+    .select("id, uploaded_by")
+    .in("id", ids);
+
   const { error } = await supabase
     .from("artworks")
     .update({ status })
     .in("id", ids);
   if (error) throw new Error(error.message);
+
+  // Notify each uploader (skip pieces with no uploader on record).
+  const cleanReason = reason?.trim() || null;
+  const cleanNote = note?.trim() || null;
+  const kind = status === "approved" ? "art_approved" : "art_rejected";
+  const rows = (targets ?? [])
+    .filter((a) => a.uploaded_by)
+    .map((a) => ({
+      recipient_id: a.uploaded_by as string,
+      kind: kind as "art_approved" | "art_rejected",
+      artwork_id: a.id,
+      reason: status === "rejected" ? cleanReason : null,
+      note: status === "rejected" ? cleanNote : null,
+    }));
+  if (rows.length > 0) {
+    // Best-effort: a failed notification shouldn't undo a completed decision.
+    await supabase.from("notifications").insert(rows);
+  }
 
   revalidatePath("/moderate");
   for (const bookId of new Set(bookIds.filter(Boolean))) {

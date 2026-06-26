@@ -138,6 +138,7 @@ export async function SiteHeader() {
   let displayName: string | undefined;
   let avatarUrl: string | null | undefined;
   let isMod = false;
+  let unread = 0;
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
@@ -148,6 +149,14 @@ export async function SiteHeader() {
       profile?.display_name || profile?.handle || user.email || "reader";
     avatarUrl = profile?.avatar_url;
     isMod = profile?.is_mod ?? false;
+
+    // Unread inbox count drives the header badge. head:true skips the rows.
+    const { count } = await supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("recipient_id", user.id)
+      .is("read_at", null);
+    unread = count ?? 0;
   }
 
   return (
@@ -172,6 +181,41 @@ export async function SiteHeader() {
         </span>
       </Link>
       <div className="flex items-center gap-2">
+        {user ? (
+          <Link
+            href="/inbox"
+            className="relative grid h-10 w-10 place-items-center rounded-[13px]"
+            style={{
+              border: "1px solid var(--line)",
+              background: "var(--obsidian-2)",
+              color: "var(--silver)",
+            }}
+            aria-label={unread > 0 ? `Inbox (${unread} unread)` : "Inbox"}
+            title="Inbox"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+              <polyline points="22,6 12,13 2,6" />
+            </svg>
+            {unread > 0 ? (
+              <span
+                className="absolute -top-1 -right-1 grid min-w-[18px] place-items-center rounded-full px-1 text-[10px] font-bold text-white"
+                style={{ background: "var(--ember)", height: 18 }}
+              >
+                {unread > 9 ? "9+" : unread}
+              </span>
+            ) : null}
+          </Link>
+        ) : null}
         {isMod ? (
           <Link
             href="/moderate"
