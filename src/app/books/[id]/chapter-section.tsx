@@ -24,12 +24,14 @@ function LockIcon() {
   );
 }
 
-// The chapters area of a book page, with two ways to look at the art:
-//   • Chapter View — the usual list, art grouped under each unlocked chapter.
-//   • Gallery View — every unlocked piece in one grid.
-// Each chapter row carries a far-left "mark read" control: tap it to set your
-// reading position to that chapter (revealing its art); tap a read one to step
-// back. This replaces the old row of chapter pills.
+// The chapters area of a book page. Three controls sit on top:
+//   • Progress selector — set how far you've read; everything at or below that
+//     chapter unlocks. Always visible, so it works in either view below.
+//   • Search — filter unlocked art by title or artist (spoiler-safe: it never
+//     reaches art from chapters you haven't read).
+//   • View toggle — Chapter View (art grouped under each chapter, with a
+//     far-left mark-read control) or Gallery View (every unlocked piece in one
+//     grid). Rejected art is deleted server-side, so it never appears here.
 export function ChapterSection({
   bookId,
   chapters,
@@ -44,6 +46,7 @@ export function ChapterSection({
   signedIn: boolean;
 }) {
   const [view, setView] = useState<"chapter" | "gallery">("chapter");
+  const [query, setQuery] = useState("");
 
   if (chapters.length === 0) {
     return (
@@ -55,13 +58,84 @@ export function ChapterSection({
 
   const firstLockedIndex = chapters.findIndex((c) => c.number > readThrough);
 
+  const q = query.trim().toLowerCase();
+  const searching = q !== "";
+  const matches = (p: GalleryArt) =>
+    !searching ||
+    (p.title?.toLowerCase().includes(q) ?? false) ||
+    (p.artist_handle?.toLowerCase().includes(q) ?? false);
+
+  const unlockedChapters = chapters.filter((c) => c.number <= readThrough);
+
   // Everything the reader is allowed to see, flattened for Gallery View.
-  const unlockedArt: GalleryArt[] = chapters
-    .filter((c) => c.number <= readThrough)
-    .flatMap((c) => artByChapter[c.id] ?? []);
+  const unlockedArt: GalleryArt[] = unlockedChapters.flatMap(
+    (c) => artByChapter[c.id] ?? [],
+  );
+  const galleryArt = unlockedArt.filter(matches);
+
+  // Chapters that still have art after the search filter (Chapter View).
+  const matchedChapters = unlockedChapters
+    .map((c) => ({ chapter: c, art: (artByChapter[c.id] ?? []).filter(matches) }))
+    .filter((x) => x.art.length > 0);
 
   return (
     <>
+      {/* Progress selector — works for both views */}
+      {signedIn ? (
+        <form
+          action={setReadThrough}
+          className="mb-3 flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2.5"
+          style={{
+            border: "1px solid var(--line)",
+            background: "var(--obsidian-2)",
+          }}
+        >
+          <input type="hidden" name="bookId" value={bookId} />
+          <label
+            className="shrink-0 text-[12px] font-semibold"
+            style={{ color: "var(--ember-soft)" }}
+            htmlFor="read-through"
+          >
+            Read through
+          </label>
+          <select
+            id="read-through"
+            name="through"
+            defaultValue={readThrough}
+            onChange={(e) => e.currentTarget.form?.requestSubmit()}
+            className="h-8 min-w-0 flex-1 rounded-[8px] px-2 text-[13px] outline-none"
+            style={{
+              border: "1px solid var(--line-2)",
+              background: "var(--obsidian-3)",
+              color: "var(--silver-bright)",
+            }}
+          >
+            <option value={0}>Not started — hide all art</option>
+            {chapters.map((c) => (
+              <option key={c.id} value={c.number}>
+                Ch. {c.number}
+                {c.title ? ` · ${c.title}` : ""}
+              </option>
+            ))}
+          </select>
+        </form>
+      ) : null}
+
+      {/* Search */}
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search this book's art by title or artist…"
+        autoComplete="off"
+        className="mb-3 h-10 w-full rounded-[var(--radius-sm)] px-3 text-[13.5px] outline-none"
+        style={{
+          border: "1px solid var(--line)",
+          background: "var(--obsidian-2)",
+          color: "var(--silver-bright)",
+        }}
+      />
+
       {/* View toggle */}
       <div className="mb-3 flex gap-2">
         {(
@@ -94,16 +168,66 @@ export function ChapterSection({
       </div>
 
       {view === "gallery" ? (
-        unlockedArt.length > 0 ? (
-          <ArtGallery art={unlockedArt} />
+        galleryArt.length > 0 ? (
+          <ArtGallery art={galleryArt} />
         ) : (
           <p className="text-[13px]" style={{ color: "var(--muted)" }}>
-            {readThrough > 0
-              ? "No art in the chapters you've unlocked yet."
-              : "Mark a chapter read to start revealing art."}
+            {searching
+              ? "No unlocked art matches your search."
+              : readThrough > 0
+                ? "No art in the chapters you've unlocked yet."
+                : "Mark a chapter read to start revealing art."}
+          </p>
+        )
+      ) : searching ? (
+        // Chapter View, filtered by search: only chapters with matches.
+        matchedChapters.length > 0 ? (
+          <ul className="flex flex-col gap-2.5">
+            {matchedChapters.map(({ chapter: ch, art }) => (
+              <li key={ch.id}>
+                <div
+                  className="rounded-[var(--radius-sm)] p-3.5"
+                  style={{
+                    border: "1px solid var(--line)",
+                    background: "var(--obsidian-2)",
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full font-mono text-[12px] font-semibold"
+                      style={{
+                        border: "1px solid var(--line-2)",
+                        background: "var(--obsidian-3)",
+                        color: "var(--ember-soft)",
+                      }}
+                    >
+                      {ch.number}
+                    </span>
+                    <span
+                      className="min-w-0 flex-1 truncate text-[14px] font-semibold"
+                      style={{ color: "var(--silver-bright)" }}
+                    >
+                      {ch.title || `Chapter ${ch.number}`}
+                    </span>
+                    <span
+                      className="shrink-0 text-[12px]"
+                      style={{ color: "var(--muted)" }}
+                    >
+                      {art.length} {art.length === 1 ? "match" : "matches"}
+                    </span>
+                  </div>
+                  <ArtGallery art={art} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-[13px]" style={{ color: "var(--muted)" }}>
+            No unlocked art matches your search.
           </p>
         )
       ) : (
+        // Chapter View, full list with mark-read controls + spoiler gate.
         <ul className="flex flex-col gap-2.5">
           {chapters.map((ch, i) => {
             const unlocked = ch.number <= readThrough;

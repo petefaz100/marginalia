@@ -232,6 +232,10 @@ export type Database = {
         Args: Record<string, never>;
         Returns: boolean;
       };
+      books_art_counts: {
+        Args: Record<string, never>;
+        Returns: { book_id: string; art_count: number }[];
+      };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;

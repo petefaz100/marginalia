@@ -94,6 +94,7 @@ function ResultRow({
 
 function BookCard({
   book,
+  empty,
 }: {
   book: {
     id: string;
@@ -101,14 +102,27 @@ function BookCard({
     author: string | null;
     cover_url: string | null;
   };
+  empty: boolean;
 }) {
   return (
     <Link href={`/books/${book.id}`} className="group block">
       <div
-        className="mb-2 aspect-[2/3] w-full overflow-hidden rounded-[var(--radius-sm)]"
+        className="relative mb-2 aspect-[2/3] w-full overflow-hidden rounded-[var(--radius-sm)]"
         style={{ border: "1px solid var(--line)", background: "var(--obsidian-2)" }}
       >
         <CoverArt url={book.cover_url} title={book.title} />
+        {empty ? (
+          <span
+            className="absolute top-1.5 left-1.5 rounded-full px-2 py-0.5 text-[9.5px] font-semibold tracking-wide uppercase"
+            style={{
+              background: "rgba(19,17,25,.86)",
+              border: "1px solid var(--line-2)",
+              color: "var(--muted-2)",
+            }}
+          >
+            No art yet
+          </span>
+        ) : null}
       </div>
       <p
         className="truncate text-[13px] font-semibold"
@@ -126,24 +140,43 @@ function BookCard({
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, sort: sortParam } = await searchParams;
   const query = (q ?? "").trim();
+  const sort: "az" | "recent" = sortParam === "recent" ? "recent" : "az";
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Fetched newest-first; that order is used directly for "Recently added".
   const { data: books } = await supabase
     .from("books")
     .select("id, title, author, year, cover_url, google_books_id")
     .order("created_at", { ascending: false });
-  const library = books ?? [];
   const addedIds = new Set(
-    library.map((b) => b.google_books_id).filter(Boolean) as string[],
+    (books ?? []).map((b) => b.google_books_id).filter(Boolean) as string[],
   );
+
+  // Which books actually have approved art (counts only — bypasses the
+  // per-reader spoiler gate via a SECURITY DEFINER function, no titles leak).
+  const { data: artCountRows } = await supabase.rpc("books_art_counts");
+  const artCount = new Map<string, number>(
+    (artCountRows ?? []).map((r) => [r.book_id, r.art_count]),
+  );
+  const hasArt = (id: string) => (artCount.get(id) ?? 0) > 0;
+
+  // Default (A–Z): books with art first, alphabetically, then the empty ones.
+  // Recently added keeps the newest-first order from the query.
+  const collator = new Intl.Collator(undefined, { sensitivity: "base" });
+  const library = [...(books ?? [])].sort((a, b) => {
+    if (sort === "recent") return 0; // stable: preserve created_at desc
+    const diff = (hasArt(b.id) ? 1 : 0) - (hasArt(a.id) ? 1 : 0);
+    if (diff !== 0) return diff;
+    return collator.compare(a.title, b.title);
+  });
 
   let results: BookSearchResult[] = [];
   let searchError: string | null = null;
@@ -220,12 +253,49 @@ export default async function Home({
         ) : null}
 
         <section className="mt-8">
-          <h2
-            className="mb-3 font-display text-[18px] font-medium"
-            style={{ color: "var(--silver-bright)" }}
-          >
-            Library
-          </h2>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2
+              className="font-display text-[18px] font-medium"
+              style={{ color: "var(--silver-bright)" }}
+            >
+              Library
+            </h2>
+            {library.length > 0 ? (
+              <div className="flex gap-1.5">
+                {(
+                  [
+                    ["az", "A–Z"],
+                    ["recent", "Recently added"],
+                  ] as const
+                ).map(([key, label]) => {
+                  const active = sort === key;
+                  const params = new URLSearchParams();
+                  if (query) params.set("q", query);
+                  if (key === "recent") params.set("sort", "recent");
+                  const href = params.toString() ? `/?${params}` : "/";
+                  return (
+                    <Link
+                      key={key}
+                      href={href}
+                      scroll={false}
+                      className="h-7 rounded-full px-2.5 text-[11.5px] font-semibold leading-7"
+                      style={
+                        active
+                          ? { background: "var(--ember)", color: "#fff" }
+                          : {
+                              border: "1px solid var(--line)",
+                              background: "var(--obsidian-2)",
+                              color: "var(--silver)",
+                            }
+                      }
+                    >
+                      {label}
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
 
           {library.length === 0 ? (
             <div
@@ -245,7 +315,7 @@ export default async function Home({
           ) : (
             <div className="grid grid-cols-3 gap-x-3 gap-y-5">
               {library.map((book) => (
-                <BookCard key={book.id} book={book} />
+                <BookCard key={book.id} book={book} empty={!hasArt(book.id)} />
               ))}
             </div>
           )}
