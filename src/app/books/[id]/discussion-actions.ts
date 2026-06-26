@@ -78,6 +78,33 @@ export async function addComment(formData: FormData): Promise<Result> {
   return { ok: true };
 }
 
+// Delete a comment. RLS ("author or mod can delete comments") is the real
+// guard — a reader can remove their own comment, and a moderator can remove
+// anyone's. Replies hang off a comment via parent_id with ON DELETE CASCADE, so
+// removing a top-level comment also clears its replies.
+export async function deleteComment(formData: FormData): Promise<Result> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "You must be signed in." };
+
+  const commentId = String(formData.get("commentId") ?? "").trim();
+  const bookId = String(formData.get("bookId") ?? "").trim();
+  if (!commentId) return { ok: false, message: "Missing comment." };
+
+  const { error } = await supabase
+    .from("comments")
+    .delete()
+    .eq("id", commentId);
+  if (error) {
+    return { ok: false, message: "Couldn't delete that comment." };
+  }
+
+  if (bookId) revalidatePath(`/books/${bookId}`);
+  return { ok: true };
+}
+
 // Cast, change, or clear a vote on a comment. Voting again with the same
 // direction toggles the vote off; voting the other way flips it. One row per
 // (user, target) is guaranteed by the table's primary key.

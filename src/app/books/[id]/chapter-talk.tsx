@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { addComment, castVote } from "./discussion-actions";
+import { addComment, castVote, deleteComment } from "./discussion-actions";
 
 // A flat, per-chapter comment. parentId null = top-level; otherwise it's a reply
 // to another comment (the stream stays one level deep). Comments for a chapter
@@ -150,6 +150,7 @@ function CommentRow({
   chapterId,
   chapterNumber,
   canPost,
+  isMod = false,
   isReply = false,
 }: {
   comment: ChapterComment;
@@ -158,9 +159,24 @@ function CommentRow({
   chapterId: string;
   chapterNumber: number;
   canPost: boolean;
+  isMod?: boolean;
   isReply?: boolean;
 }) {
+  const router = useRouter();
   const [replying, setReplying] = useState(false);
+  const [deleting, startDelete] = useTransition();
+
+  function remove() {
+    if (!window.confirm("Delete this comment? This can't be undone."))
+      return;
+    const fd = new FormData();
+    fd.set("commentId", comment.id);
+    fd.set("bookId", bookId);
+    startDelete(async () => {
+      await deleteComment(fd);
+      router.refresh();
+    });
+  }
 
   return (
     <li className="flex gap-2.5">
@@ -215,6 +231,17 @@ function CommentRow({
               {replying ? "Close" : "Reply"}
             </button>
           ) : null}
+          {isMod ? (
+            <button
+              type="button"
+              onClick={remove}
+              disabled={deleting}
+              className="text-[12px] font-semibold disabled:opacity-50"
+              style={{ color: "var(--wine-soft)" }}
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </button>
+          ) : null}
         </div>
 
         {replying ? (
@@ -242,6 +269,7 @@ function CommentRow({
                 chapterId={chapterId}
                 chapterNumber={chapterNumber}
                 canPost={canPost}
+                isMod={isMod}
                 isReply
               />
             ))}
@@ -333,6 +361,7 @@ export function ChapterTalk({
   comments,
   signedIn,
   hasUsername,
+  isMod = false,
 }: {
   bookId: string;
   chapterId: string;
@@ -340,6 +369,7 @@ export function ChapterTalk({
   comments: ChapterComment[];
   signedIn: boolean;
   hasUsername: boolean;
+  isMod?: boolean;
 }) {
   const canPost = signedIn && hasUsername;
   const topLevel = comments.filter((c) => c.parentId === null);
@@ -398,6 +428,7 @@ export function ChapterTalk({
               chapterId={chapterId}
               chapterNumber={chapterNumber}
               canPost={canPost}
+              isMod={isMod}
             />
           ))}
         </ul>

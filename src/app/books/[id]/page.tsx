@@ -8,6 +8,12 @@ import { ChapterSection } from "./chapter-section";
 import { Contribute } from "./contribute";
 import { type ChapterComment } from "./chapter-talk";
 
+// Vote tallies and comments change constantly and must reflect the live database
+// on every visit. Forcing dynamic rendering keeps the page from ever serving a
+// stale snapshot (e.g. an upvote count that "disappears" after you navigate away
+// and come back).
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({
   params,
 }: {

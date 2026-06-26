@@ -401,6 +401,7 @@ export function ChapterSection({
                   comments={focusedComments}
                   signedIn={signedIn}
                   hasUsername={hasUsername}
+                  isMod={isMod}
                 />
               )}
             </>
