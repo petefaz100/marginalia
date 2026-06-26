@@ -137,15 +137,17 @@ export async function SiteHeader() {
 
   let displayName: string | undefined;
   let avatarUrl: string | null | undefined;
+  let isMod = false;
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("handle, display_name, avatar_url")
+      .select("handle, display_name, avatar_url, is_mod")
       .eq("id", user.id)
       .single();
     displayName =
       profile?.display_name || profile?.handle || user.email || "reader";
     avatarUrl = profile?.avatar_url;
+    isMod = profile?.is_mod ?? false;
   }
 
   return (
@@ -169,7 +171,22 @@ export async function SiteHeader() {
           </i>
         </span>
       </Link>
-      <AuthControl signedIn={!!user} name={displayName} avatarUrl={avatarUrl} />
+      <div className="flex items-center gap-2">
+        {isMod ? (
+          <Link
+            href="/moderate"
+            className="flex h-10 items-center rounded-full px-3.5 text-[13px] font-semibold"
+            style={{
+              border: "1px solid var(--line)",
+              background: "var(--obsidian-2)",
+              color: "var(--ember-soft)",
+            }}
+          >
+            Queue
+          </Link>
+        ) : null}
+        <AuthControl signedIn={!!user} name={displayName} avatarUrl={avatarUrl} />
+      </div>
     </header>
   );
 }

@@ -99,3 +99,96 @@ export async function setReadThrough(formData: FormData) {
 
   revalidatePath(`/books/${bookId}`);
 }
+
+// What image types we accept, mapped to the file extension we store under.
+const ALLOWED_IMAGE_TYPES: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB — matches next.config's body limit.
+
+// Submits a piece of fan art tagged to a chapter. The image file is stored in
+// the 'art' storage bucket; the row is always created as 'pending' (RLS
+// enforces this) so a mod approves it before non-uploaders can see it. The
+// chosen chapter IS the spoiler level: the art stays hidden until a reader has
+// marked that chapter read.
+export async function submitArt(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("You must be signed in to submit art.");
+
+  const bookId = String(formData.get("bookId") ?? "").trim();
+  const chapterId = String(formData.get("chapterId") ?? "").trim();
+  if (!bookId) throw new Error("Missing book.");
+  if (!chapterId) throw new Error("Pick a chapter for this art.");
+
+  const file = formData.get("image");
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("Choose an image to upload.");
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    throw new Error("Image is too large (max 8MB).");
+  }
+  const ext = ALLOWED_IMAGE_TYPES[file.type];
+  if (!ext) {
+    throw new Error("Unsupported image type. Use JPEG, PNG, WebP, or GIF.");
+  }
+
+  const title = String(formData.get("title") ?? "").trim();
+  const artistHandle = String(formData.get("artistHandle") ?? "").trim();
+  const creditUrl = String(formData.get("creditUrl") ?? "").trim();
+
+  // Store under the uploader's own folder so the storage policy accepts it.
+  const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+  const { error: uploadError } = await supabase.storage
+    .from("art")
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (uploadError) throw new Error(uploadError.message);
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("art").getPublicUrl(path);
+
+  const { error } = await supabase.from("artworks").insert({
+    book_id: bookId,
+    chapter_id: chapterId,
+    image_url: publicUrl,
+    title: title || null,
+    artist_handle: artistHandle || null,
+    credit_url: creditUrl || null,
+    uploaded_by: user.id,
+    status: "pending",
+  });
+  if (error) {
+    // Best-effort cleanup so a failed insert doesn't orphan the file.
+    await supabase.storage.from("art").remove([path]);
+    throw new Error(error.message);
+  }
+
+  revalidatePath(`/books/${bookId}`);
+}
+
+// Flags a piece of art for mod review. Anyone signed in can file one; only
+// mods can read the resulting report queue (enforced by RLS).
+export async function reportArt(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("You must be signed in to report art.");
+
+  const artworkId = String(formData.get("artworkId") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!artworkId) throw new Error("Missing artwork.");
+
+  const { error } = await supabase.from("reports").insert({
+    artwork_id: artworkId,
+    reported_by: user.id,
+    reason: reason || null,
+  });
+  if (error) throw new Error(error.message);
+}

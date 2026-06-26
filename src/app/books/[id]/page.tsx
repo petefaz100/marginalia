@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { SiteHeader } from "../../_components/site-header";
 import { CoverArt } from "../../_components/cover-art";
 import { addChapter, setReadThrough } from "../actions";
+import { ArtGallery, type GalleryArt } from "../../_components/art-gallery";
+import { ArtUpload } from "../../_components/art-upload";
 
 function LockIcon() {
   return (
@@ -60,15 +62,18 @@ export default async function BookPage({
     readThrough = progress?.chapter_read_through ?? 0;
   }
 
-  // RLS only returns art the reader is allowed to see, so a raw count per
+  // RLS only returns art the reader is allowed to see (approved + at/below the
+  // chapter they've read, plus their own uploads), so grouping the rows by
   // chapter already respects the spoiler gate.
   const { data: arts } = await supabase
     .from("artworks")
-    .select("id, chapter_id")
+    .select("id, chapter_id, image_url, title, artist_handle, credit_url, status")
     .eq("book_id", id);
-  const artCount = new Map<string, number>();
+  const artByChapter = new Map<string, GalleryArt[]>();
   for (const a of arts ?? []) {
-    artCount.set(a.chapter_id, (artCount.get(a.chapter_id) ?? 0) + 1);
+    const list = artByChapter.get(a.chapter_id) ?? [];
+    list.push(a);
+    artByChapter.set(a.chapter_id, list);
   }
 
   const nextNumber =
@@ -190,7 +195,8 @@ export default async function BookPage({
             <ul className="flex flex-col gap-2.5">
               {chapters.map((ch, i) => {
                 const unlocked = ch.number <= readThrough;
-                const count = artCount.get(ch.id) ?? 0;
+                const chapterArt = artByChapter.get(ch.id) ?? [];
+                const count = chapterArt.length;
                 return (
                   <li key={ch.id}>
                     {i === firstLockedIndex ? (
@@ -255,6 +261,10 @@ export default async function BookPage({
                           </span>
                         )}
                       </div>
+
+                      {unlocked && chapterArt.length > 0 ? (
+                        <ArtGallery art={chapterArt} />
+                      ) : null}
 
                       {!unlocked && user ? (
                         <form action={setReadThrough} className="mt-3">
@@ -348,6 +358,10 @@ export default async function BookPage({
               Sign in to add chapters.
             </p>
           )}
+
+          {user && chapters.length > 0 ? (
+            <ArtUpload bookId={book.id} chapters={chapters} />
+          ) : null}
         </section>
       </main>
     </div>
