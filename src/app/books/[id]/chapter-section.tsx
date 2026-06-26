@@ -190,6 +190,10 @@ export function ChapterSection({
   const [focus, setFocus] = useState(initialFocus);
   const [tab, setTab] = useState<TabKey>(initialHasArt ? "art" : "talk");
   const [query, setQuery] = useState("");
+  // Both galleries are collapsed by default — a freshly opened book shows only
+  // the position line, the search, and the chapter browser. The reader opts in
+  // to seeing the full unlocked grid and/or the locked teasers.
+  const [showUnlocked, setShowUnlocked] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   // The "what chapter are you on?" dropdown is controlled so the Confirm button
   // submits whatever's currently picked. It re-initialises to the saved value
@@ -332,36 +336,60 @@ export function ChapterSection({
             style={{ color: "var(--silver-bright)" }}
           />
         </div>
-        <label
-          className="mt-2 flex w-fit cursor-pointer items-center gap-2 text-[12.5px]"
-          style={{ color: "var(--silver)" }}
-        >
-          <input
-            type="checkbox"
-            checked={showHidden}
-            onChange={(e) => setShowHidden(e.target.checked)}
-            className="h-4 w-4 accent-[var(--ember)]"
-          />
-          Show all hidden art
-          {lockedCount > 0 ? (
-            <span style={{ color: "var(--muted)" }}>({lockedCount} locked)</span>
-          ) : null}
-        </label>
+        <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2">
+          <label
+            className="flex cursor-pointer items-center gap-2 text-[12.5px]"
+            style={{ color: "var(--silver)" }}
+          >
+            <input
+              type="checkbox"
+              checked={showUnlocked}
+              onChange={(e) => setShowUnlocked(e.target.checked)}
+              className="h-4 w-4 accent-[var(--ember)]"
+            />
+            Show all unlocked art
+            {allReadArt.length > 0 ? (
+              <span style={{ color: "var(--muted)" }}>
+                ({allReadArt.length})
+              </span>
+            ) : null}
+          </label>
+          <label
+            className="flex cursor-pointer items-center gap-2 text-[12.5px]"
+            style={{ color: "var(--silver)" }}
+          >
+            <input
+              type="checkbox"
+              checked={showHidden}
+              onChange={(e) => setShowHidden(e.target.checked)}
+              className="h-4 w-4 accent-[var(--ember)]"
+            />
+            Show all hidden art
+            {lockedCount > 0 ? (
+              <span style={{ color: "var(--muted)" }}>
+                ({lockedCount} locked)
+              </span>
+            ) : null}
+          </label>
+        </div>
       </div>
 
-      {/* Results grid: real unlocked art (searchable) + locked teaser tiles. */}
-      {filteredAll.length > 0 ? (
-        <ArtGallery art={filteredAll} bookId={bookId} isMod={isMod} />
-      ) : (
-        <p className="mt-3 text-[13px]" style={{ color: "var(--muted)" }}>
-          {q
-            ? "No unlocked art matches your search."
-            : readThrough > 0
-              ? "No art in the chapters you've unlocked yet."
-              : "Set the chapter you're on to start revealing art."}
-        </p>
-      )}
+      {/* Unlocked art grid — only when searching or when the reader opts in. */}
+      {q || showUnlocked ? (
+        filteredAll.length > 0 ? (
+          <ArtGallery art={filteredAll} bookId={bookId} isMod={isMod} />
+        ) : (
+          <p className="mt-3 text-[13px]" style={{ color: "var(--muted)" }}>
+            {q
+              ? "No unlocked art matches your search."
+              : readThrough > 0
+                ? "No art in the chapters you've unlocked yet."
+                : "Set the chapter you're on to start revealing art."}
+          </p>
+        )
+      ) : null}
 
+      {/* Locked teaser tiles — only when the reader opts in. */}
       {showHidden && lockedCount > 0 ? (
         <div className="mt-5">
           <div
@@ -384,12 +412,6 @@ export function ChapterSection({
             images are kept off your screen until then, so nothing&apos;s spoiled.
           </p>
         </div>
-      ) : !showHidden && lockedCount > 0 ? (
-        <p className="mt-3 text-[12px]" style={{ color: "var(--muted)" }}>
-          {lockedCount} {lockedCount === 1 ? "piece is" : "pieces are"} locked
-          ahead. Tick “Show all hidden art” to see where they wait, or move your
-          chapter forward to unlock them.
-        </p>
       ) : null}
 
       {/* Browse a single chapter's art + discussion. */}
