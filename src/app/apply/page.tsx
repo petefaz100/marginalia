@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { signInWithGoogle } from "../auth/actions";
 import { SiteHeader } from "../_components/site-header";
 import { ApplyForm } from "./apply-form";
 
@@ -8,7 +10,53 @@ export const metadata = {
     "Help curate spoiler-safe art for your favorite books. Tell the mods a little about yourself.",
 };
 
-export default function ApplyPage() {
+// Signed-out visitors see a prompt to sign in first. Tying applications to a
+// real account means the email always matches a user, so accepting an applicant
+// reliably finds and promotes them — no typos, no orphaned applications.
+function SignInPrompt() {
+  return (
+    <div className="flex flex-col gap-3">
+      <p
+        className="font-display text-[16px] font-medium"
+        style={{ color: "var(--silver-bright)" }}
+      >
+        Sign in to apply
+      </p>
+      <p className="text-[13.5px]" style={{ color: "var(--silver)" }}>
+        Becoming a mod is tied to your marginalia account, so sign in first. It
+        only takes a moment, and we&apos;ll bring you right back here.
+      </p>
+      <form action={signInWithGoogle}>
+        <input type="hidden" name="next" value="/apply" />
+        <button
+          type="submit"
+          className="mt-1 flex h-11 items-center gap-2 rounded-full px-5 text-[14px] font-semibold"
+          style={{ background: "var(--ember)", color: "#fff" }}
+        >
+          Sign in with Google
+        </button>
+      </form>
+    </div>
+  );
+}
+
+export default async function ApplyPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let defaultName = "";
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("display_name, username, handle")
+      .eq("id", user.id)
+      .single();
+    defaultName =
+      profile?.display_name || profile?.username || profile?.handle || "";
+  }
+
   return (
     <div
       className="relative mx-auto min-h-screen w-full max-w-[540px] md:max-w-[680px]"
@@ -41,7 +89,11 @@ export default function ApplyPage() {
             background: "var(--obsidian-2)",
           }}
         >
-          <ApplyForm />
+          {user ? (
+            <ApplyForm defaultName={defaultName} email={user.email ?? ""} />
+          ) : (
+            <SignInPrompt />
+          )}
         </div>
 
         <Link

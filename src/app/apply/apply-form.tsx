@@ -16,27 +16,32 @@ const inputStyle = {
   color: "var(--silver-bright)",
 } as const;
 
-// The public "apply to be a mod" form: name, email, why, and which role best
-// describes the applicant. On submit it posts to the mod queue and shows a
-// thank-you state in place of the form.
-export function ApplyForm() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+// The "apply to be a mod" form: name, why, and which role best describes the
+// applicant. The applicant must be signed in (enforced on the page), so the
+// email is taken from their account — shown here read-only, never typed —
+// which guarantees accepting them finds the right account. On submit it posts
+// to the mod queue and shows a thank-you state in place of the form.
+export function ApplyForm({
+  defaultName,
+  email,
+}: {
+  defaultName: string;
+  email: string;
+}) {
+  const [name, setName] = useState(defaultName);
   const [reason, setReason] = useState("");
   const [role, setRole] = useState<ModApplicantRole | "">("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [pending, start] = useTransition();
 
-  const canSubmit =
-    name.trim() && email.trim() && reason.trim() && role && !pending;
+  const canSubmit = name.trim() && reason.trim() && role && !pending;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
     const fd = new FormData();
     fd.set("name", name);
-    fd.set("email", email);
     fd.set("reason", reason);
     fd.set("role", role);
     start(async () => {
@@ -89,21 +94,24 @@ export function ApplyForm() {
         />
       </label>
 
-      <label className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5">
         <span className="text-[12.5px] font-semibold" style={{ color: "var(--silver)" }}>
           Email
         </span>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          maxLength={200}
-          autoComplete="email"
-          placeholder="you@example.com"
-          className="h-11 rounded-[var(--radius-sm)] px-3 text-[15px] outline-none"
-          style={inputStyle}
-        />
-      </label>
+        <div
+          className="flex h-11 items-center rounded-[var(--radius-sm)] px-3 text-[15px]"
+          style={{
+            border: "1px solid var(--line)",
+            background: "var(--obsidian-2)",
+            color: "var(--muted)",
+          }}
+        >
+          {email || "your account email"}
+        </div>
+        <span className="text-[11.5px]" style={{ color: "var(--muted-2)" }}>
+          Tied to your account — this is where we&apos;ll reach you.
+        </span>
+      </div>
 
       <label className="flex flex-col gap-1.5">
         <span className="text-[12.5px] font-semibold" style={{ color: "var(--silver)" }}>

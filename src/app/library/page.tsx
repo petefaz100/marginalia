@@ -118,14 +118,6 @@ function BookCard({
         >
           <CoverArt url={book.cover_url} title={book.title} />
         </div>
-        {empty ? (
-          <span
-            className="absolute top-1.5 left-1.5 rounded-full px-2 py-0.5 text-[9.5px] font-semibold tracking-wide uppercase"
-            style={{ background: "#fff", color: "var(--ember)" }}
-          >
-            No art yet
-          </span>
-        ) : null}
       </div>
       <p
         className="truncate text-[13px] font-semibold"

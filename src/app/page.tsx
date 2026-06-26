@@ -12,7 +12,7 @@ export const metadata = {
 const FAQS: { q: string; a: string }[] = [
   {
     q: "What is marginalia?",
-    a: "A community-driven home for the art and discussion that grows up around the books you love — kept in step with how far you've read, so nothing ahead is spoiled.",
+    a: "Marginalia are the notes, sketches, and scribbles readers leave in a book's margins — and that's the spirit here. marginalia is a community-driven home for the art and discussion that grows up around the books you love, kept in step with how far you've read, so nothing ahead is spoiled.",
   },
   {
     q: "Is it free?",
@@ -255,39 +255,6 @@ export default function Home() {
               </span>
               <span style={{ color: "var(--muted)" }}>Ch. 7+ · locked</span>
             </div>
-          </div>
-        </section>
-
-        {/* ---------------- Definition ---------------- */}
-        <section className="pt-16">
-          <div
-            className="rounded-[var(--radius)] p-6 sm:p-8"
-            style={{
-              border: "1px solid var(--line)",
-              background: "rgba(27,25,37,.45)",
-            }}
-          >
-            <p
-              className="font-display text-[22px] leading-tight font-medium sm:text-[26px]"
-              style={{ color: "var(--silver-bright)" }}
-            >
-              mar·gi·na·lia{" "}
-              <span
-                className="font-sans text-[14px] font-normal italic"
-                style={{ color: "var(--muted)" }}
-              >
-                noun
-              </span>
-            </p>
-            <p
-              className="mt-3 max-w-[680px] text-[15px] leading-relaxed"
-              style={{ color: "var(--silver)" }}
-            >
-              The notes, sketches, and scribbles readers leave in a book&apos;s
-              margins. That&apos;s the spirit here: a shared margin for the art
-              and discussion a story inspires — kept in step with how far
-              you&apos;ve read, so the next chapter is never spoiled.
-            </p>
           </div>
         </section>
 
