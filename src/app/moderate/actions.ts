@@ -114,8 +114,10 @@ export async function acceptApplication(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "You must be signed in." };
 
-  const { data: isMod } = await supabase.rpc("is_mod");
-  if (!isMod) return { ok: false, message: "Mods only." };
+  // Approving mods is an admin-only power (the site owner), not a general mod
+  // ability — enforced again in the DB function and RLS.
+  const { data: isAdmin } = await supabase.rpc("is_admin");
+  if (!isAdmin) return { ok: false, message: "Only the admin can do that." };
 
   if (!applicationId) return { ok: false, message: "Missing application." };
 
@@ -149,8 +151,8 @@ export async function rejectApplication(applicationId: string) {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("You must be signed in.");
 
-  const { data: isMod } = await supabase.rpc("is_mod");
-  if (!isMod) throw new Error("Mods only.");
+  const { data: isAdmin } = await supabase.rpc("is_admin");
+  if (!isAdmin) throw new Error("Only the admin can do that.");
 
   if (!applicationId) throw new Error("Missing application.");
 

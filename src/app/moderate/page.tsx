@@ -19,6 +19,10 @@ export default async function ModeratePage() {
   const { data: isMod } = await supabase.rpc("is_mod");
   if (!isMod) notFound();
 
+  // Approving/rejecting mod applications is reserved for the admin (site owner).
+  // Regular mods see the art and reports queues but not the applications queue.
+  const { data: isAdmin } = await supabase.rpc("is_admin");
+
   // Mods see every row regardless of status (RLS), so a plain filter works.
   const { data: pendingRows } = await supabase
     .from("artworks")
@@ -36,11 +40,14 @@ export default async function ModeratePage() {
     .order("created_at", { ascending: true });
   const reports = reportRows ?? [];
 
-  // "Become a mod" applications from the public /apply form (mods only, per RLS).
-  const { data: applicationRows } = await supabase
-    .from("mod_applications")
-    .select("id, name, email, role, reason, created_at")
-    .order("created_at", { ascending: true });
+  // "Become a mod" applications from the public /apply form (admin only, per
+  // RLS). Skip the query entirely for non-admin mods.
+  const { data: applicationRows } = isAdmin
+    ? await supabase
+        .from("mod_applications")
+        .select("id, name, email, role, reason, created_at")
+        .order("created_at", { ascending: true })
+    : { data: null };
   const applications: ApplicationItem[] = (applicationRows ?? []).map((a) => ({
     id: a.id,
     name: a.name,
@@ -215,23 +222,28 @@ export default async function ModeratePage() {
           <ReportedQueue items={reported} />
         </section>
 
-        {/* Mod applications */}
-        <section className="mt-10">
-          <h2
-            className="font-display text-[20px] leading-tight font-medium"
-            style={{ color: "var(--silver-bright)" }}
-          >
-            Mod applications
-          </h2>
-          <p className="mt-1 mb-5 text-[13px]" style={{ color: "var(--muted)" }}>
-            {applications.length === 0
-              ? "No applications waiting."
-              : `${applications.length} ${
-                  applications.length === 1 ? "person wants" : "people want"
-                } to help curate. Accept to grant mod abilities (their account must use the same email), or reject to clear it.`}
-          </p>
-          <ApplicationsQueue items={applications} />
-        </section>
+        {/* Mod applications — admin only */}
+        {isAdmin ? (
+          <section className="mt-10">
+            <h2
+              className="font-display text-[20px] leading-tight font-medium"
+              style={{ color: "var(--silver-bright)" }}
+            >
+              Mod applications
+            </h2>
+            <p
+              className="mt-1 mb-5 text-[13px]"
+              style={{ color: "var(--muted)" }}
+            >
+              {applications.length === 0
+                ? "No applications waiting."
+                : `${applications.length} ${
+                    applications.length === 1 ? "person wants" : "people want"
+                  } to help curate. Accept to grant mod abilities (their account must use the same email), or reject to clear it.`}
+            </p>
+            <ApplicationsQueue items={applications} />
+          </section>
+        ) : null}
 
         <Link
           href="/library"

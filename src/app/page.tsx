@@ -419,18 +419,104 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ---------------- Mod / curator ---------------- */}
+        {/* ---------------- Ways to contribute ---------------- */}
         <section id="curate" className="scroll-mt-24 pt-20">
-          <Eyebrow>become a curator</Eyebrow>
-          <SectionTitle>Help curate your favorite book.</SectionTitle>
+          <Eyebrow>contribute</Eyebrow>
+          <SectionTitle>Three ways to join in.</SectionTitle>
           <p
             className="mt-4 max-w-[620px] text-[15px] leading-relaxed"
             style={{ color: "var(--silver)" }}
           >
-            Know a series inside out? Become a mod and build the spoiler-safe
-            space you wish existed — adding books, placing art at the right
-            chapter, and keeping discussions welcoming.
+            Sign up and you can start building marginalia right away — no mod
+            status required. Everything stays spoiler-safe, and every image you
+            upload is reviewed by a moderator before it goes live.
           </p>
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+            <Card>
+              <span
+                className="font-mono grid h-9 w-9 place-items-center rounded-full text-[15px] font-bold"
+                style={{
+                  background: "rgba(154,127,208,.16)",
+                  color: "var(--violet-soft)",
+                  border: "1px solid rgba(154,127,208,.3)",
+                }}
+              >
+                1
+              </span>
+              <p
+                className="mt-3 text-[15px] font-semibold"
+                style={{ color: "var(--silver-bright)" }}
+              >
+                Add books to the library
+              </p>
+              <p
+                className="mt-1.5 text-[13.5px] leading-relaxed"
+                style={{ color: "var(--muted)" }}
+              >
+                Search any title and add it in a couple of taps, giving its art
+                and discussions a home.
+              </p>
+            </Card>
+            <Card>
+              <span
+                className="font-mono grid h-9 w-9 place-items-center rounded-full text-[15px] font-bold"
+                style={{
+                  background: "rgba(154,127,208,.16)",
+                  color: "var(--violet-soft)",
+                  border: "1px solid rgba(154,127,208,.3)",
+                }}
+              >
+                2
+              </span>
+              <p
+                className="mt-3 text-[15px] font-semibold"
+                style={{ color: "var(--silver-bright)" }}
+              >
+                Contribute art &amp; comments
+              </p>
+              <p
+                className="mt-1.5 text-[13.5px] leading-relaxed"
+                style={{ color: "var(--muted)" }}
+              >
+                Upload art and join the conversation. Your images go to the
+                moderators for review before they appear — so nothing spoils a
+                reader.
+              </p>
+            </Card>
+            <Card>
+              <span
+                className="font-mono grid h-9 w-9 place-items-center rounded-full text-[15px] font-bold"
+                style={{
+                  background: "rgba(154,127,208,.16)",
+                  color: "var(--violet-soft)",
+                  border: "1px solid rgba(154,127,208,.3)",
+                }}
+              >
+                3
+              </span>
+              <p
+                className="mt-3 text-[15px] font-semibold"
+                style={{ color: "var(--silver-bright)" }}
+              >
+                Apply to be a mod
+              </p>
+              <p
+                className="mt-1.5 text-[13.5px] leading-relaxed"
+                style={{ color: "var(--muted)" }}
+              >
+                Mods do everything above and more: they review submitted images
+                and can add art directly.{" "}
+                <Link
+                  href="/apply"
+                  className="font-semibold hover:underline"
+                  style={{ color: "var(--ember-soft)" }}
+                >
+                  Apply to be a mod →
+                </Link>
+              </p>
+            </Card>
+          </div>
         </section>
 
         {/* ---------------- How it works ---------------- */}

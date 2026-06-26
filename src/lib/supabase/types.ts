@@ -370,6 +370,10 @@ export type Database = {
         Args: Record<string, never>;
         Returns: boolean;
       };
+      is_admin: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
       has_username: {
         Args: Record<string, never>;
         Returns: boolean;
