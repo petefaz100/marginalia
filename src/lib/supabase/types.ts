@@ -394,6 +394,10 @@ export type Database = {
         Args: Record<string, never>;
         Returns: { book_id: string; art_count: number }[];
       };
+      book_chapter_art_counts: {
+        Args: { bid: string };
+        Returns: { chapter_id: string; n: number }[];
+      };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;

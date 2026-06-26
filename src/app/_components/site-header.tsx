@@ -1,23 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { signInWithGoogle, signOut } from "../auth/actions";
-
-function NeedsUsernamePill() {
-  return (
-    <Link
-      href="/account"
-      className="flex h-10 items-center rounded-full px-3.5 text-[12.5px] font-semibold"
-      style={{
-        border: "1px solid var(--ember)",
-        background: "rgba(224,104,63,.12)",
-        color: "var(--ember-soft)",
-      }}
-      title="Choose a public username to start posting"
-    >
-      Set username
-    </Link>
-  );
-}
+import { HeaderNav } from "./header-nav";
 
 function LeafMark() {
   // The marginalia brand mark: a bookmark with a sparkle, paired with a padlock
@@ -33,110 +16,6 @@ function LeafMark() {
       className="h-8 w-auto"
       style={{ filter: "drop-shadow(0 0 10px rgba(159,182,224,.35))" }}
     />
-  );
-}
-
-const AVATAR_GRADIENTS = [
-  "linear-gradient(135deg,#e0683f,#8a3a5b)",
-  "linear-gradient(135deg,#6f8fc9,#8a3a5b)",
-  "linear-gradient(135deg,#c9a25e,#e0683f)",
-  "linear-gradient(135deg,#6db28a,#6f8fc9)",
-  "linear-gradient(135deg,#b25c7d,#6f8fc9)",
-];
-
-function AuthControl({
-  signedIn,
-  name,
-  avatarUrl,
-}: {
-  signedIn: boolean;
-  name?: string;
-  avatarUrl?: string | null;
-}) {
-  if (!signedIn) {
-    return (
-      <form action={signInWithGoogle}>
-        <button
-          type="submit"
-          className="flex h-10 items-center gap-2 rounded-full px-3.5 text-[13px] font-semibold"
-          style={{
-            border: "1px solid var(--line)",
-            background: "var(--obsidian-2)",
-            color: "var(--silver)",
-          }}
-        >
-          Sign in
-        </button>
-      </form>
-    );
-  }
-
-  const label = name || "reader";
-  const initial = label.charAt(0).toUpperCase();
-  const gradient =
-    AVATAR_GRADIENTS[initial.charCodeAt(0) % AVATAR_GRADIENTS.length];
-
-  return (
-    <div className="flex items-center gap-2">
-      <Link
-        href="/account"
-        className="flex items-center gap-2 rounded-full py-[5px] pr-3 pl-[5px]"
-        style={{ border: "1px solid var(--line)", background: "var(--obsidian-2)" }}
-        title="Account settings"
-      >
-        {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={avatarUrl}
-            alt=""
-            width={28}
-            height={28}
-            className="h-7 w-7 rounded-full object-cover"
-          />
-        ) : (
-          <span
-            className="grid h-7 w-7 place-items-center rounded-full text-[13px] font-extrabold text-white"
-            style={{ background: gradient }}
-          >
-            {initial}
-          </span>
-        )}
-        <span
-          className="max-w-[120px] truncate text-[13px] font-semibold"
-          style={{ color: "var(--silver)" }}
-        >
-          {label}
-        </span>
-      </Link>
-      <form action={signOut}>
-        <button
-          type="submit"
-          className="grid h-10 w-10 place-items-center rounded-[13px]"
-          style={{
-            border: "1px solid var(--line)",
-            background: "var(--obsidian-2)",
-            color: "var(--muted)",
-          }}
-          aria-label="Sign out"
-          title="Sign out"
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
-        </button>
-      </form>
-    </div>
   );
 }
 
@@ -245,69 +124,15 @@ export async function SiteHeader() {
         </span>
       </Link>
 
-      <div className="flex items-center gap-2">
-        {user ? (
-          <Link
-            href="/inbox"
-            className="relative grid h-10 w-10 place-items-center rounded-[13px]"
-            style={{
-              border: "1px solid var(--line)",
-              background: "var(--obsidian-2)",
-              color: "var(--silver)",
-            }}
-            aria-label={unread > 0 ? `Inbox (${unread} unread)` : "Inbox"}
-            title="Inbox"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
-              <polyline points="22,6 12,13 2,6" />
-            </svg>
-            {unread > 0 ? (
-              <span
-                className="absolute -top-1 -right-1 grid min-w-[18px] place-items-center rounded-full px-1 text-[10px] font-bold text-white"
-                style={{ background: "var(--ember)", height: 18 }}
-              >
-                {unread > 9 ? "9+" : unread}
-              </span>
-            ) : null}
-          </Link>
-        ) : null}
-        {isMod ? (
-          <Link
-            href="/moderate"
-            className="relative flex h-10 items-center rounded-full px-3.5 text-[13px] font-semibold"
-            style={{
-              border: "1px solid var(--line)",
-              background: "var(--obsidian-2)",
-              color: "var(--ember-soft)",
-            }}
-            aria-label={
-              queueCount > 0 ? `Queue (${queueCount} waiting)` : "Queue"
-            }
-          >
-            Queue
-            {queueCount > 0 ? (
-              <span
-                className="absolute -top-1 -right-1 grid min-w-[18px] place-items-center rounded-full px-1 text-[10px] font-bold text-white"
-                style={{ background: "var(--ember)", height: 18 }}
-              >
-                {queueCount > 9 ? "9+" : queueCount}
-              </span>
-            ) : null}
-          </Link>
-        ) : null}
-        {needsUsername ? <NeedsUsernamePill /> : null}
-        <AuthControl signedIn={!!user} name={displayName} avatarUrl={avatarUrl} />
-      </div>
+      <HeaderNav
+        signedIn={!!user}
+        displayName={displayName ?? "reader"}
+        avatarUrl={avatarUrl}
+        isMod={isMod}
+        needsUsername={needsUsername}
+        unread={unread}
+        queueCount={queueCount}
+      />
     </header>
   );
 }

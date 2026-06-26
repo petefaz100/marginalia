@@ -104,6 +104,17 @@ export default async function BookPage({
     artByChapter.set(a.chapter_id, list);
   }
 
+  // Approved-art counts per chapter for the WHOLE book — including chapters the
+  // reader hasn't unlocked. This powers the "waiting ahead" teaser: it tells the
+  // UI how many blurred placeholder tiles to draw for each locked chapter. It
+  // returns counts only (no images/titles), so the spoiler gate is never
+  // weakened — locked art still never reaches the browser.
+  const { data: countRows } = await supabase.rpc("book_chapter_art_counts", {
+    bid: id,
+  });
+  const artCountByChapter: Record<string, number> = {};
+  for (const r of countRows ?? []) artCountByChapter[r.chapter_id] = r.n;
+
   // ---- Discussion data ----------------------------------------------------
   // Comments live under per-chapter "threads" (one implicit thread per chapter
   // in the new flat model, plus any legacy titled threads). We fetch the threads
@@ -236,6 +247,7 @@ export default async function BookPage({
             chapters={chapters}
             readThrough={readThrough}
             artByChapter={Object.fromEntries(artByChapter)}
+            artCountByChapter={artCountByChapter}
             commentsByChapter={Object.fromEntries(commentsByChapter)}
             signedIn={!!user}
             hasUsername={hasUsername}
