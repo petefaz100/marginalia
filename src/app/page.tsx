@@ -223,16 +223,21 @@ export default function Home() {
           </div>
 
           {/* Preview card: one book, a couple unlocked pieces, the rest locked.
-              The whole card links to that book's page on the site. */}
-          <Link
-            href="/books/30611c20-80bd-433d-9669-5c2669df360d"
-            className="block rounded-[var(--radius)] p-4 transition-transform hover:-translate-y-0.5"
+              A stretched link covers the whole card → the book's page; the
+              artist credit below layers on top with its own Instagram link. */}
+          <div
+            className="relative rounded-[var(--radius)] p-4 transition-transform hover:-translate-y-0.5"
             style={{
               border: "1px solid var(--line)",
               background: "rgba(27,25,37,.7)",
               boxShadow: "var(--shadow)",
             }}
           >
+            <Link
+              href="/books/30611c20-80bd-433d-9669-5c2669df360d"
+              aria-label="A Court of Thorns and Roses"
+              className="absolute inset-0 z-0 rounded-[var(--radius)]"
+            />
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p
@@ -273,9 +278,17 @@ export default function Home() {
             </div>
             <p className="mt-2 text-[11px]" style={{ color: "var(--muted)" }}>
               Featured character art by{" "}
-              <span style={{ color: "var(--ember-soft)" }}>@madschofield</span>
+              <a
+                href="https://www.instagram.com/madschofield/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="relative z-10 font-semibold hover:underline"
+                style={{ color: "var(--ember-soft)" }}
+              >
+                @madschofield
+              </a>
             </p>
-          </Link>
+          </div>
         </section>
 
         {/* ---------------- How the gate works ---------------- */}
