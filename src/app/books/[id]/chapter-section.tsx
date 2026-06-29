@@ -160,10 +160,10 @@ function ProgressPicker({
       <input type="hidden" name="bookId" value={bookId} />
       <label
         htmlFor="through-picker"
-        className="block text-[14px] font-semibold"
+        className="block text-[15.5px] font-semibold"
         style={{ color: "var(--silver-bright)" }}
       >
-        Up to which chapter have you read?
+        What&apos;s the last chapter you read?
       </label>
       <select
         id="through-picker"
@@ -196,7 +196,7 @@ function ProgressStatus() {
   const { pending } = useFormStatus();
   return (
     <p
-      className="mt-2 flex items-center gap-1.5 text-[12px]"
+      className="mt-2 flex items-center gap-1.5 text-[12.5px]"
       style={{ color: "var(--muted)" }}
     >
       {pending ? (
@@ -470,7 +470,7 @@ export function ChapterSection({
           >
             <Arrow dir="left" />
           </button>
-          <div className="flex items-center gap-1.5 text-[13px]">
+          <div className="flex items-center gap-1.5 text-[14.5px]">
             <span style={{ color: "var(--muted)" }}>Chapter</span>
             <input
               type="number"
@@ -515,7 +515,7 @@ export function ChapterSection({
             </span>
           ) : null}
           <h3
-            className="min-w-0 flex-1 truncate text-[16px] font-semibold"
+            className="min-w-0 flex-1 truncate text-[18px] font-semibold"
             style={{ color: "var(--silver-bright)" }}
           >
             {focused.title || `Chapter ${focused.number}`}
@@ -525,8 +525,12 @@ export function ChapterSection({
         {unlocked ? (
           <>
             {/* Tabs — just Art and Talk now; the old "Gallery" is folded into
-                Art as a layout toggle (carousel vs grid). */}
-            <div className="mt-3 flex gap-2">
+                Art as a layout toggle (carousel vs grid). A full-width
+                segmented control so the targets are easy to hit on a phone. */}
+            <div
+              className="mt-4 flex gap-1 rounded-full p-1"
+              style={{ border: "1px solid var(--line)", background: "var(--obsidian-3)" }}
+            >
               {(
                 [
                   ["art", "Art", <FrameIcon key="f" />],
@@ -541,15 +545,11 @@ export function ChapterSection({
                     key={key}
                     type="button"
                     onClick={() => setTab(key)}
-                    className="flex h-8 items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold"
+                    className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-[14px] font-semibold transition-colors"
                     style={
                       active
                         ? { background: "var(--ember)", color: "#fff" }
-                        : {
-                            border: "1px solid var(--line)",
-                            background: "var(--obsidian-3)",
-                            color: "var(--silver)",
-                          }
+                        : { background: "transparent", color: "var(--silver)" }
                     }
                   >
                     {icon}
@@ -604,7 +604,7 @@ export function ChapterSection({
                   )}
                 </>
               ) : (
-                <p className="mt-3 text-[13px]" style={{ color: "var(--muted)" }}>
+                <p className="mt-3 text-[14px]" style={{ color: "var(--muted)" }}>
                   No art yet for this chapter.
                 </p>
               )
@@ -621,12 +621,12 @@ export function ChapterSection({
             )}
           </>
         ) : (
-          <div className="mt-3 flex items-center gap-2 text-[13px]" style={{ color: "var(--muted)" }}>
+          <div className="mt-4 flex items-center gap-2 text-[14px]" style={{ color: "var(--muted)" }}>
             <LockIcon />
             <span>
               You haven&apos;t read this far yet. Set{" "}
               <span style={{ color: "var(--ember-soft)" }}>
-                “Up to which chapter have you read?”
+                “What&apos;s the last chapter you read?”
               </span>{" "}
               to chapter {focused.number} or beyond to unlock its art and
               discussion.
