@@ -138,69 +138,83 @@ function LockedTile({ chapter }: { chapter: number }) {
   );
 }
 
-// A one-click mark-read form. `through` is the reading position it sets when
-// pressed (so the same control can mark a chapter read, or un-read).
-function MarkReadButton({
+// The one control that sets your place: "Up to which chapter have you read?"
+// Picking a chapter auto-saves immediately (no extra confirm step) and unlocks
+// everything up to and including it. Browsing chapters below never moves this
+// line — only this picker does.
+function ProgressPicker({
   bookId,
-  through,
-  label,
-  filled,
-  full = false,
+  total,
+  readThrough,
 }: {
   bookId: string;
-  through: number;
-  label: string;
-  filled: boolean;
-  full?: boolean;
+  total: number;
+  readThrough: number;
 }) {
   return (
-    <form action={setReadThrough} className={full ? "w-full" : "shrink-0"}>
+    <form
+      action={setReadThrough}
+      className="mb-5 rounded-[var(--radius-sm)] px-3.5 py-3.5"
+      style={{ border: "1px solid var(--line)", background: "var(--obsidian-2)" }}
+    >
       <input type="hidden" name="bookId" value={bookId} />
-      <input type="hidden" name="through" value={through} />
-      <MarkReadSubmit label={label} filled={filled} full={full} />
+      <label
+        htmlFor="through-picker"
+        className="block text-[14px] font-semibold"
+        style={{ color: "var(--silver-bright)" }}
+      >
+        Up to which chapter have you read?
+      </label>
+      <select
+        id="through-picker"
+        name="through"
+        defaultValue={String(readThrough)}
+        onChange={(e) => e.currentTarget.form?.requestSubmit()}
+        className="mt-2 h-11 w-full rounded-[var(--radius-sm)] px-3 text-[14px] font-semibold outline-none"
+        style={{
+          border: "1px solid var(--line-2)",
+          background: "var(--obsidian-3)",
+          color: "var(--silver-bright)",
+        }}
+      >
+        <option value="0">Not started yet</option>
+        {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
+          <option key={n} value={n}>
+            Chapter {n}
+          </option>
+        ))}
+      </select>
+      <ProgressStatus />
     </form>
   );
 }
 
-// The submit button lives in its own component so it can read useFormStatus —
+// The save indicator lives in its own component so it can read useFormStatus —
 // that hook only reports the pending state of the <form> it's rendered inside.
-function MarkReadSubmit({
-  label,
-  filled,
-  full = false,
-}: {
-  label: string;
-  filled: boolean;
-  full?: boolean;
-}) {
+// While saving it shows a spinner; otherwise it shows the reassuring helper text.
+function ProgressStatus() {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className={`flex items-center justify-center gap-1.5 rounded-full font-semibold disabled:opacity-70 ${
-        full ? "h-11 w-full px-4 text-[14px]" : "h-9 px-3.5 text-[12.5px]"
-      }`}
-      style={
-        filled
-          ? { background: "var(--ember)", color: "#fff" }
-          : {
-              border: "1px solid var(--line-2)",
-              background: "var(--obsidian-3)",
-              color: "var(--silver)",
-            }
-      }
+    <p
+      className="mt-2 flex items-center gap-1.5 text-[12px]"
+      style={{ color: "var(--muted)" }}
     >
-      {pending ? <Spinner /> : null}
-      {label}
-    </button>
+      {pending ? (
+        <>
+          <Spinner size={12} />
+          Saving…
+        </>
+      ) : (
+        "Everything up to and including this chapter is unlocked — change it any time."
+      )}
+    </p>
   );
 }
 
-// The chapters area of a book page. There is ONE chapter control — a browser
-// you step through to look at any chapter. Looking never changes your spoiler
-// line; you set your place deliberately with the "Mark read" button on the
-// chapter card. Art you've unlocked shows for real; art from chapters you
+// The chapters area of a book page. You set your place with ONE picker — "Up
+// to which chapter have you read?" — which is the only thing that moves your
+// spoiler line. A separate chapter browser lets you look at any chapter without
+// changing that line. Art you've unlocked shows for real; art from chapters you
 // haven't reached appears only as blurred, chapter-labelled teaser tiles — the
 // real images are never sent to the browser, so the gate is enforced
 // server-side (RLS), not by CSS.
@@ -310,40 +324,10 @@ export function ChapterSection({
 
   return (
     <>
-      {/* Reading-progress banner: where you are + a one-line cue for how to set
-          it (browse to your chapter, tap Mark read). */}
-      <div
-        className="mb-4 rounded-[var(--radius-sm)] px-3.5 py-3"
-        style={{ border: "1px solid var(--line)", background: "var(--obsidian-2)" }}
-      >
-        {readThrough > 0 ? (
-          <>
-            <p className="text-[13.5px]" style={{ color: "var(--silver)" }}>
-              You&apos;re on{" "}
-              <span className="font-semibold" style={{ color: "var(--silver-bright)" }}>
-                chapter {readThrough}
-              </span>{" "}
-              of {total}.
-            </p>
-            <p className="mt-0.5 text-[12px]" style={{ color: "var(--muted)" }}>
-              Art and discussion are unlocked through here. Reached a new
-              chapter? Browse to it below and tap{" "}
-              <span style={{ color: "var(--ember-soft)" }}>Mark read</span>.
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="text-[13.5px]" style={{ color: "var(--silver)" }}>
-              You haven&apos;t set your place yet.
-            </p>
-            <p className="mt-0.5 text-[12px]" style={{ color: "var(--muted)" }}>
-              Browse to the chapter you&apos;re on below and tap{" "}
-              <span style={{ color: "var(--ember-soft)" }}>Mark read</span> to
-              reveal its art and discussion — and everything before it.
-            </p>
-          </>
-        )}
-      </div>
+      {/* The single reading-position control. Pick the chapter you've read up
+          to and it saves instantly — that's the only thing that moves your
+          spoiler line. */}
+      <ProgressPicker bookId={bookId} total={total} readThrough={readThrough} />
 
       {/* "Find art" — collapsed by default so a freshly opened book stays calm
           on a phone. Tapping it reveals search across unlocked art + two opt-in
@@ -424,7 +408,7 @@ export function ChapterSection({
                     ? "No unlocked art matches your search."
                     : readThrough > 0
                       ? "No art in the chapters you've unlocked yet."
-                      : "Mark a chapter read below to start revealing art."}
+                      : "Set your reading chapter above to start revealing art."}
                 </p>
               )
             ) : null}
@@ -448,8 +432,8 @@ export function ChapterSection({
                   ))}
                 </div>
                 <p className="mt-2 text-[12px]" style={{ color: "var(--muted)" }}>
-                  These reveal automatically as you mark their chapters read — the
-                  real images are kept off your screen until then, so
+                  These reveal automatically as your reading chapter reaches them
+                  — the real images are kept off your screen until then, so
                   nothing&apos;s spoiled.
                 </p>
               </div>
@@ -458,8 +442,9 @@ export function ChapterSection({
         ) : null}
       </div>
 
-      {/* Focused single-chapter view. The Mark-read button here is how you set
-          your place — jump to any chapter above, then mark it read. */}
+      {/* Focused single-chapter view — a browser for looking at any chapter.
+          Stepping through here never changes your place; that's set only by the
+          picker above. */}
       <div
         className="rounded-[var(--radius-sm)] p-3.5"
         style={{
@@ -536,29 +521,6 @@ export function ChapterSection({
             {focused.title || `Chapter ${focused.number}`}
           </h3>
         </div>
-
-        {/* Primary action: a clear full-width CTA while this chapter is still
-            locked; a quiet "read" toggle once it's unlocked. */}
-        {unlocked ? (
-          <div className="mt-3 flex justify-end">
-            <MarkReadButton
-              bookId={bookId}
-              through={focused.number - 1}
-              label="✓ Read"
-              filled={false}
-            />
-          </div>
-        ) : (
-          <div className="mt-3">
-            <MarkReadButton
-              bookId={bookId}
-              through={focused.number}
-              label={`Mark ch. ${focused.number} read`}
-              filled
-              full
-            />
-          </div>
-        )}
 
         {unlocked ? (
           <>
@@ -662,11 +624,12 @@ export function ChapterSection({
           <div className="mt-3 flex items-center gap-2 text-[13px]" style={{ color: "var(--muted)" }}>
             <LockIcon />
             <span>
-              You haven&apos;t read this far yet. Tap{" "}
+              You haven&apos;t read this far yet. Set{" "}
               <span style={{ color: "var(--ember-soft)" }}>
-                Mark ch. {focused.number} read
+                “Up to which chapter have you read?”
               </span>{" "}
-              above to unlock its art and discussion.
+              to chapter {focused.number} or beyond to unlock its art and
+              discussion.
             </span>
           </div>
         )}
