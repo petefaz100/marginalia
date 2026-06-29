@@ -45,6 +45,62 @@ function SignOutIcon() {
   );
 }
 
+function SignInIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+      <polyline points="10 17 15 12 10 7" />
+      <line x1="15" y1="12" x2="3" y2="12" />
+    </svg>
+  );
+}
+
+// The mobile hamburger toggle, shared by the signed-in and signed-out headers.
+// Shows an ember dot when something behind the menu wants attention.
+function HamburgerButton({
+  open,
+  setOpen,
+  attention,
+}: {
+  open: boolean;
+  setOpen: (fn: (v: boolean) => boolean) => void;
+  attention: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen((v) => !v)}
+      aria-label={open ? "Close menu" : "Open menu"}
+      aria-expanded={open}
+      className="relative grid h-10 w-10 place-items-center rounded-[13px]"
+      style={{
+        border: "1px solid var(--line)",
+        background: "var(--obsidian-2)",
+        color: "var(--silver)",
+      }}
+    >
+      {open ? (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      ) : (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+      )}
+      {!open && attention > 0 ? (
+        <span
+          className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full"
+          style={{ background: "var(--ember)" }}
+        />
+      ) : null}
+    </button>
+  );
+}
+
 function Avatar({
   label,
   avatarUrl,
@@ -113,37 +169,81 @@ export function HeaderNav({
 }: Props) {
   const [open, setOpen] = useState(false);
 
-  // Signed-out: Library + Sign in, inline at every size (no menu to collapse).
+  // Signed-out: Library + Sign in inline on desktop; the same two collapse
+  // behind the hamburger on mobile, so the menu is consistent at every size.
   if (!signedIn) {
     return (
-      <div className="flex items-center gap-2">
-        <Link
-          href="/library"
-          className="flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold"
-          style={{
-            border: "1px solid var(--line)",
-            background: "var(--obsidian-2)",
-            color: "var(--silver)",
-          }}
-          title="Library"
-        >
-          <BookIcon size={16} />
-          Library
-        </Link>
-        <form action={signInWithGoogle}>
-          <button
-            type="submit"
-            className="flex h-10 items-center gap-2 rounded-full px-3.5 text-[13px] font-semibold"
+      <>
+        {/* Desktop: inline controls */}
+        <div className="hidden items-center gap-2 md:flex">
+          <Link
+            href="/library"
+            className="flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold"
             style={{
               border: "1px solid var(--line)",
               background: "var(--obsidian-2)",
               color: "var(--silver)",
             }}
+            title="Library"
           >
-            Sign in
-          </button>
-        </form>
-      </div>
+            <BookIcon size={16} />
+            Library
+          </Link>
+          <form action={signInWithGoogle}>
+            <button
+              type="submit"
+              className="flex h-10 items-center gap-2 rounded-full px-3.5 text-[13px] font-semibold"
+              style={{
+                border: "1px solid var(--line)",
+                background: "var(--obsidian-2)",
+                color: "var(--silver)",
+              }}
+            >
+              Sign in
+            </button>
+          </form>
+        </div>
+
+        {/* Mobile: hamburger toggle */}
+        <div className="relative md:hidden">
+          <HamburgerButton open={open} setOpen={setOpen} attention={0} />
+          {open ? (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setOpen(false)}
+                aria-hidden
+              />
+              <div
+                className="absolute right-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-[var(--radius)] p-1.5"
+                style={{
+                  border: "1px solid var(--line-2)",
+                  background: "var(--obsidian-2)",
+                  boxShadow: "0 12px 32px rgba(0,0,0,.45)",
+                }}
+              >
+                <MenuLink
+                  href="/library"
+                  label="Library"
+                  onClick={() => setOpen(false)}
+                  icon={<BookIcon />}
+                />
+                <div className="my-1 h-px" style={{ background: "var(--line)" }} />
+                <form action={signInWithGoogle}>
+                  <button
+                    type="submit"
+                    className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-[13.5px] font-semibold"
+                    style={{ color: "var(--ember-soft)" }}
+                  >
+                    <SignInIcon />
+                    Sign in
+                  </button>
+                </form>
+              </div>
+            </>
+          ) : null}
+        </div>
+      </>
     );
   }
 
@@ -243,37 +343,7 @@ export function HeaderNav({
 
       {/* Mobile: hamburger toggle */}
       <div className="relative md:hidden">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-label={open ? "Close menu" : "Open menu"}
-          aria-expanded={open}
-          className="relative grid h-10 w-10 place-items-center rounded-[13px]"
-          style={{
-            border: "1px solid var(--line)",
-            background: "var(--obsidian-2)",
-            color: "var(--silver)",
-          }}
-        >
-          {open ? (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          ) : (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          )}
-          {!open && attention > 0 ? (
-            <span
-              className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full"
-              style={{ background: "var(--ember)" }}
-            />
-          ) : null}
-        </button>
+        <HamburgerButton open={open} setOpen={setOpen} attention={attention} />
 
         {open ? (
           <>

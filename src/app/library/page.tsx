@@ -5,6 +5,7 @@ import { searchBooks, type BookSearchResult } from "@/lib/google-books";
 import { SiteHeader } from "../_components/site-header";
 import { CoverArt } from "../_components/cover-art";
 import { AddButton } from "./add-button";
+import { SortControl } from "./sort-control";
 
 export const metadata = { title: "Library" };
 
@@ -324,42 +325,7 @@ export default async function Library({
               Library
             </h2>
             {library.length > 0 ? (
-              <div className="flex gap-1.5">
-                {(
-                  [
-                    ["az", "A–Z"],
-                    ["recent", "Recently added"],
-                    ["indie", "Indie books"],
-                  ] as const
-                ).map(([key, label]) => {
-                  const active = sort === key;
-                  const params = new URLSearchParams();
-                  if (query) params.set("q", query);
-                  if (key !== "az") params.set("sort", key);
-                  const href = params.toString()
-                    ? `/library?${params}`
-                    : "/library";
-                  return (
-                    <Link
-                      key={key}
-                      href={href}
-                      scroll={false}
-                      className="h-7 rounded-full px-2.5 text-[11.5px] font-semibold leading-7"
-                      style={
-                        active
-                          ? { background: "var(--ember)", color: "#fff" }
-                          : {
-                              border: "1px solid var(--line)",
-                              background: "var(--obsidian-2)",
-                              color: "var(--silver)",
-                            }
-                      }
-                    >
-                      {label}
-                    </Link>
-                  );
-                })}
-              </div>
+              <SortControl sort={sort} query={query} />
             ) : null}
           </div>
 
