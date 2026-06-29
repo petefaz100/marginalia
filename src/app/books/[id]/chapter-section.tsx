@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { setReadThrough } from "../actions";
 import { ArtGallery, type GalleryArt } from "../../_components/art-gallery";
@@ -138,33 +138,63 @@ function LockedTile({ chapter }: { chapter: number }) {
   );
 }
 
-// The one control that sets your place: "Up to which chapter have you read?"
-// Picking a chapter auto-saves immediately (no extra confirm step) and unlocks
-// everything up to and including it. Browsing chapters below never moves this
-// line — only this picker does.
+function Caret({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform .15s" }}
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+// The expanded reading-position picker. Choosing a chapter auto-saves (no
+// confirm step), unlocks everything up to and including it, then collapses the
+// panel back to the slim bar. Browsing chapters elsewhere never moves this line
+// — only this picker does.
 function ProgressPicker({
   bookId,
   total,
   readThrough,
+  onClose,
 }: {
   bookId: string;
   total: number;
   readThrough: number;
+  onClose: () => void;
 }) {
   return (
     <form
       action={setReadThrough}
-      className="mb-5 rounded-[var(--radius-sm)] px-3.5 py-3.5"
-      style={{ border: "1px solid var(--line)", background: "var(--obsidian-2)" }}
+      className="rounded-[var(--radius-sm)] px-3.5 py-3"
+      style={{ border: "1px solid var(--line-2)", background: "var(--obsidian-2)" }}
     >
       <input type="hidden" name="bookId" value={bookId} />
-      <label
-        htmlFor="through-picker"
-        className="block text-[15.5px] font-semibold"
-        style={{ color: "var(--silver-bright)" }}
-      >
-        What&apos;s the last chapter you read?
-      </label>
+      <div className="flex items-center justify-between">
+        <label
+          htmlFor="through-picker"
+          className="text-[14px] font-semibold"
+          style={{ color: "var(--silver-bright)" }}
+        >
+          What&apos;s the last chapter you read?
+        </label>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-[12.5px] font-semibold"
+          style={{ color: "var(--muted)" }}
+        >
+          Done
+        </button>
+      </div>
       <select
         id="through-picker"
         name="through"
@@ -184,19 +214,25 @@ function ProgressPicker({
           </option>
         ))}
       </select>
-      <ProgressStatus />
+      <ProgressStatus onSaved={onClose} />
     </form>
   );
 }
 
 // The save indicator lives in its own component so it can read useFormStatus —
 // that hook only reports the pending state of the <form> it's rendered inside.
-// While saving it shows a spinner; otherwise it shows the reassuring helper text.
-function ProgressStatus() {
+// It shows a spinner while saving, and once the save lands it collapses the
+// panel (the falling edge of `pending`) so the bar minimizes on its own.
+function ProgressStatus({ onSaved }: { onSaved: () => void }) {
   const { pending } = useFormStatus();
+  const wasPending = useRef(false);
+  useEffect(() => {
+    if (wasPending.current && !pending) onSaved();
+    wasPending.current = pending;
+  }, [pending, onSaved]);
   return (
     <p
-      className="mt-2 flex items-center gap-1.5 text-[12.5px]"
+      className="mt-2 flex items-center gap-1.5 text-[12px]"
       style={{ color: "var(--muted)" }}
     >
       {pending ? (
@@ -205,7 +241,7 @@ function ProgressStatus() {
           Saving…
         </>
       ) : (
-        "Everything up to and including this chapter is unlocked — change it any time."
+        "Everything up to and including this chapter is unlocked."
       )}
     </p>
   );
@@ -250,12 +286,12 @@ export function ChapterSection({
   // The Art tab can show as a swipeable carousel or a grid; the reader picks.
   const [artLayout, setArtLayout] = useState<ArtLayout>("carousel");
   const [query, setQuery] = useState("");
-  // The whole "find art" panel (search + reveal pills + result grids) is hidden
-  // behind a single button so a freshly opened book stays calm on a phone —
-  // just where you are and the chapter you're reading.
-  const [showFind, setShowFind] = useState(false);
-  // Both galleries are collapsed by default — the reader opts in to seeing the
-  // full unlocked grid and/or the locked teasers.
+  // Only one top panel is ever open at a time so the page stays calm and the
+  // art gets the screen: the reading-position picker, the art finder, or
+  // neither (the default — just a slim bar + the chapter you're on).
+  const [panel, setPanel] = useState<"none" | "position" | "find">("none");
+  // Both galleries inside the finder are collapsed by default — the reader opts
+  // in to seeing the full unlocked grid and/or the locked teasers.
   const [showUnlocked, setShowUnlocked] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
 
@@ -324,32 +360,70 @@ export function ChapterSection({
 
   return (
     <>
-      {/* The single reading-position control. Pick the chapter you've read up
-          to and it saves instantly — that's the only thing that moves your
-          spoiler line. */}
-      <ProgressPicker bookId={bookId} total={total} readThrough={readThrough} />
+      {/* Slim top bar: where you are + a quick way to find art. Both controls
+          are accordions — opening one closes the other — so at most one panel
+          is ever expanded and the chapter below keeps the screen. */}
+      <div className="mb-3 flex items-stretch gap-2">
+        {/* Reading position. Collapsed it's a slim summary; tapping expands the
+            picker, and choosing a chapter saves + minimizes it again. */}
+        {panel === "position" ? null : (
+          <button
+            type="button"
+            onClick={() => setPanel("position")}
+            className="flex h-11 flex-1 items-center gap-2 rounded-[var(--radius-sm)] px-3.5 text-left"
+            style={{ border: "1px solid var(--line)", background: "var(--obsidian-2)" }}
+          >
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block text-[10.5px] font-semibold uppercase tracking-[.4px]" style={{ color: "var(--muted)" }}>
+                Last chapter read
+              </span>
+              <span className="block truncate text-[14px] font-semibold" style={{ color: "var(--silver-bright)" }}>
+                {readThrough > 0 ? `Chapter ${readThrough}` : "Not started"}
+              </span>
+            </span>
+            <span className="flex shrink-0 items-center gap-1 text-[12.5px] font-semibold" style={{ color: "var(--ember-soft)" }}>
+              Change
+              <Caret open={false} />
+            </span>
+          </button>
+        )}
 
-      {/* "Find art" — collapsed by default so a freshly opened book stays calm
-          on a phone. Tapping it reveals search across unlocked art + two opt-in
-          reveal pills, and any results render inside this panel. */}
-      <div className="mb-5">
-        <button
-          type="button"
-          onClick={() => setShowFind((v) => !v)}
-          aria-expanded={showFind}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-sm)] text-[13.5px] font-semibold"
-          style={{
-            border: "1px solid var(--line)",
-            background: "var(--obsidian-2)",
-            color: showFind ? "var(--ember-soft)" : "var(--silver)",
-          }}
-        >
-          <SearchIcon />
-          {showFind ? "Hide art finder" : "Find art"}
-        </button>
+        {/* Find art toggle. Hidden while the position picker is open so the bar
+            doesn't crowd. */}
+        {panel === "position" ? null : (
+          <button
+            type="button"
+            onClick={() => setPanel((p) => (p === "find" ? "none" : "find"))}
+            aria-expanded={panel === "find"}
+            aria-label="Find art"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-[var(--radius-sm)]"
+            style={{
+              border: "1px solid var(--line)",
+              background: panel === "find" ? "var(--obsidian-3)" : "var(--obsidian-2)",
+              color: panel === "find" ? "var(--ember-soft)" : "var(--silver)",
+            }}
+          >
+            <SearchIcon />
+          </button>
+        )}
+      </div>
 
-        {showFind ? (
-          <div className="mt-2">
+      {/* Expanded reading-position picker (replaces the slim bar while open). */}
+      {panel === "position" ? (
+        <div className="mb-3">
+          <ProgressPicker
+            bookId={bookId}
+            total={total}
+            readThrough={readThrough}
+            onClose={() => setPanel("none")}
+          />
+        </div>
+      ) : null}
+
+      {/* Expanded art finder: search across unlocked art + two opt-in reveal
+          pills, results rendered inline. */}
+      {panel === "find" ? (
+        <div className="mb-4">
             <div
               className="flex h-11 items-center gap-2 rounded-[var(--radius-sm)] px-3"
               style={{
@@ -438,21 +512,14 @@ export function ChapterSection({
                 </p>
               </div>
             ) : null}
-          </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
-      {/* Focused single-chapter view — a browser for looking at any chapter.
-          Stepping through here never changes your place; that's set only by the
-          picker above. */}
-      <div
-        className="rounded-[var(--radius-sm)] p-3.5"
-        style={{
-          border: "1px solid var(--line)",
-          background: "var(--obsidian-2)",
-          opacity: unlocked ? 1 : 0.85,
-        }}
-      >
+      {/* Focused chapter — borderless so the art carousel reads as the main,
+          near-full-bleed content (like flipping through a mobile app) instead of
+          one more boxed section. Stepping here never changes your reading
+          position; that's set only by the picker above. */}
+      <div style={{ opacity: unlocked ? 1 : 0.85 }}>
         {/* Chapter selector — step with the arrows or type a number to jump.
             Viewing here never changes your spoiler line. */}
         <div className="flex items-center justify-between gap-2">
