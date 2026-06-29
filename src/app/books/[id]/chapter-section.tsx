@@ -145,30 +145,42 @@ function MarkReadButton({
   through,
   label,
   filled,
+  full = false,
 }: {
   bookId: string;
   through: number;
   label: string;
   filled: boolean;
+  full?: boolean;
 }) {
   return (
-    <form action={setReadThrough} className="shrink-0">
+    <form action={setReadThrough} className={full ? "w-full" : "shrink-0"}>
       <input type="hidden" name="bookId" value={bookId} />
       <input type="hidden" name="through" value={through} />
-      <MarkReadSubmit label={label} filled={filled} />
+      <MarkReadSubmit label={label} filled={filled} full={full} />
     </form>
   );
 }
 
 // The submit button lives in its own component so it can read useFormStatus —
 // that hook only reports the pending state of the <form> it's rendered inside.
-function MarkReadSubmit({ label, filled }: { label: string; filled: boolean }) {
+function MarkReadSubmit({
+  label,
+  filled,
+  full = false,
+}: {
+  label: string;
+  filled: boolean;
+  full?: boolean;
+}) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
       disabled={pending}
-      className="flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[12.5px] font-semibold disabled:opacity-70"
+      className={`flex items-center justify-center gap-1.5 rounded-full font-semibold disabled:opacity-70 ${
+        full ? "h-11 w-full px-4 text-[14px]" : "h-9 px-3.5 text-[12.5px]"
+      }`}
       style={
         filled
           ? { background: "var(--ember)", color: "#fff" }
@@ -224,9 +236,12 @@ export function ChapterSection({
   // The Art tab can show as a swipeable carousel or a grid; the reader picks.
   const [artLayout, setArtLayout] = useState<ArtLayout>("carousel");
   const [query, setQuery] = useState("");
-  // Both galleries are collapsed by default — a freshly opened book shows only
-  // the position line, the search, and the chapter browser. The reader opts in
-  // to seeing the full unlocked grid and/or the locked teasers.
+  // The whole "find art" panel (search + reveal pills + result grids) is hidden
+  // behind a single button so a freshly opened book stays calm on a phone —
+  // just where you are and the chapter you're reading.
+  const [showFind, setShowFind] = useState(false);
+  // Both galleries are collapsed by default — the reader opts in to seeing the
+  // full unlocked grid and/or the locked teasers.
   const [showUnlocked, setShowUnlocked] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
 
@@ -285,7 +300,7 @@ export function ChapterSection({
 
   // Shared styling for the two opt-in toggle pills under the search bar.
   const pillBase =
-    "flex h-8 items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold transition-colors";
+    "flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[12.5px] font-semibold transition-colors";
   const pillOn = { background: "var(--ember)", color: "#fff" } as const;
   const pillOff = {
     border: "1px solid var(--line-2)",
@@ -330,162 +345,117 @@ export function ChapterSection({
         )}
       </div>
 
-      {/* Always-on search across the art you've unlocked, with two opt-in pills
-          to reveal the full unlocked grid and/or the locked teasers. */}
-      <div className="mb-2">
-        <div
-          className="flex h-10 items-center gap-2 rounded-[var(--radius-sm)] px-3"
+      {/* "Find art" — collapsed by default so a freshly opened book stays calm
+          on a phone. Tapping it reveals search across unlocked art + two opt-in
+          reveal pills, and any results render inside this panel. */}
+      <div className="mb-5">
+        <button
+          type="button"
+          onClick={() => setShowFind((v) => !v)}
+          aria-expanded={showFind}
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-sm)] text-[13.5px] font-semibold"
           style={{
             border: "1px solid var(--line)",
             background: "var(--obsidian-2)",
-            color: "var(--muted)",
+            color: showFind ? "var(--ember-soft)" : "var(--silver)",
           }}
         >
           <SearchIcon />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search art by title or artist…"
-            autoComplete="off"
-            className="h-full w-full bg-transparent text-[13.5px] outline-none"
-            style={{ color: "var(--silver-bright)" }}
-          />
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowUnlocked((v) => !v)}
-            aria-pressed={showUnlocked}
-            className={pillBase}
-            style={showUnlocked ? pillOn : pillOff}
-          >
-            {showUnlocked ? <CheckIcon size={13} /> : null}
-            All unlocked art
-            {allReadArt.length > 0 ? (
-              <span style={{ opacity: 0.8 }}>· {allReadArt.length}</span>
-            ) : null}
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowHidden((v) => !v)}
-            aria-pressed={showHidden}
-            className={pillBase}
-            style={showHidden ? pillOn : pillOff}
-          >
-            {showHidden ? <CheckIcon size={13} /> : <LockIcon size={12} />}
-            Hidden art
-            {lockedCount > 0 ? (
-              <span style={{ opacity: 0.8 }}>· {lockedCount} locked</span>
-            ) : null}
-          </button>
-        </div>
-      </div>
+          {showFind ? "Hide art finder" : "Find art"}
+        </button>
 
-      {/* Unlocked art grid — only when searching or when the reader opts in. */}
-      {q || showUnlocked ? (
-        filteredAll.length > 0 ? (
-          <ArtGallery art={filteredAll} bookId={bookId} isMod={isMod} />
-        ) : (
-          <p className="mt-3 text-[13px]" style={{ color: "var(--muted)" }}>
-            {q
-              ? "No unlocked art matches your search."
-              : readThrough > 0
-                ? "No art in the chapters you've unlocked yet."
-                : "Mark a chapter read below to start revealing art."}
-          </p>
-        )
-      ) : null}
-
-      {/* Locked teaser tiles — only when the reader opts in. */}
-      {showHidden && lockedCount > 0 ? (
-        <div className="mt-5">
-          <div
-            className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold"
-            style={{ color: "var(--muted)" }}
-          >
-            <LockIcon size={13} />
-            <span>
-              Waiting ahead · {lockedCount}{" "}
-              {lockedCount === 1 ? "piece" : "pieces"} locked
-            </span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {lockedTeasers.map((t) => (
-              <LockedTile key={t.key} chapter={t.chapter} />
-            ))}
-          </div>
-          <p className="mt-2 text-[12px]" style={{ color: "var(--muted)" }}>
-            These reveal automatically as you mark their chapters read — the real
-            images are kept off your screen until then, so nothing&apos;s spoiled.
-          </p>
-        </div>
-      ) : null}
-
-      {/* The single chapter control: a browser you step through to view any
-          chapter. Looking here never changes your spoiler line. */}
-      <div
-        className="mt-7 mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[var(--radius-sm)] px-3 py-2.5"
-        style={{ border: "1px solid var(--line)", background: "var(--obsidian-2)" }}
-      >
-        <div className="flex items-center gap-2">
-          <span
-            className="text-[12px] font-semibold"
-            style={{ color: "var(--ember-soft)" }}
-          >
-            Browse chapter
-          </span>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setFocus(focusNum - 1)}
-              disabled={focusNum <= 1}
-              aria-label="Previous chapter"
-              className="grid h-8 w-8 place-items-center rounded-[8px] disabled:opacity-40"
+        {showFind ? (
+          <div className="mt-2">
+            <div
+              className="flex h-11 items-center gap-2 rounded-[var(--radius-sm)] px-3"
               style={{
-                border: "1px solid var(--line-2)",
-                background: "var(--obsidian-3)",
-                color: "var(--silver)",
+                border: "1px solid var(--line)",
+                background: "var(--obsidian-2)",
+                color: "var(--muted)",
               }}
             >
-              <Arrow dir="left" />
-            </button>
-            <input
-              type="number"
-              min={1}
-              max={total}
-              value={focusNum}
-              onChange={(e) => {
-                const n = parseInt(e.target.value, 10);
-                if (!Number.isNaN(n)) setFocus(Math.min(Math.max(n, 1), total));
-              }}
-              aria-label="Chapter number"
-              className="h-8 w-14 rounded-[8px] px-2 text-center text-[13px] outline-none"
-              style={{
-                border: "1px solid var(--line-2)",
-                background: "var(--obsidian-3)",
-                color: "var(--silver-bright)",
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => setFocus(focusNum + 1)}
-              disabled={focusNum >= total}
-              aria-label="Next chapter"
-              className="grid h-8 w-8 place-items-center rounded-[8px] disabled:opacity-40"
-              style={{
-                border: "1px solid var(--line-2)",
-                background: "var(--obsidian-3)",
-                color: "var(--silver)",
-              }}
-            >
-              <Arrow dir="right" />
-            </button>
+              <SearchIcon />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search art by title or artist…"
+                autoComplete="off"
+                className="h-full w-full bg-transparent text-[14px] outline-none"
+                style={{ color: "var(--silver-bright)" }}
+              />
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowUnlocked((v) => !v)}
+                aria-pressed={showUnlocked}
+                className={pillBase}
+                style={showUnlocked ? pillOn : pillOff}
+              >
+                {showUnlocked ? <CheckIcon size={13} /> : null}
+                All unlocked art
+                {allReadArt.length > 0 ? (
+                  <span style={{ opacity: 0.8 }}>· {allReadArt.length}</span>
+                ) : null}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowHidden((v) => !v)}
+                aria-pressed={showHidden}
+                className={pillBase}
+                style={showHidden ? pillOn : pillOff}
+              >
+                {showHidden ? <CheckIcon size={13} /> : <LockIcon size={12} />}
+                Hidden art
+                {lockedCount > 0 ? (
+                  <span style={{ opacity: 0.8 }}>· {lockedCount} locked</span>
+                ) : null}
+              </button>
+            </div>
+
+            {/* Unlocked art grid — when searching or when opted in. */}
+            {q || showUnlocked ? (
+              filteredAll.length > 0 ? (
+                <ArtGallery art={filteredAll} bookId={bookId} isMod={isMod} />
+              ) : (
+                <p className="mt-3 text-[13px]" style={{ color: "var(--muted)" }}>
+                  {q
+                    ? "No unlocked art matches your search."
+                    : readThrough > 0
+                      ? "No art in the chapters you've unlocked yet."
+                      : "Mark a chapter read below to start revealing art."}
+                </p>
+              )
+            ) : null}
+
+            {/* Locked teaser tiles — when opted in. */}
+            {showHidden && lockedCount > 0 ? (
+              <div className="mt-5">
+                <div
+                  className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold"
+                  style={{ color: "var(--muted)" }}
+                >
+                  <LockIcon size={13} />
+                  <span>
+                    Waiting ahead · {lockedCount}{" "}
+                    {lockedCount === 1 ? "piece" : "pieces"} locked
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {lockedTeasers.map((t) => (
+                    <LockedTile key={t.key} chapter={t.chapter} />
+                  ))}
+                </div>
+                <p className="mt-2 text-[12px]" style={{ color: "var(--muted)" }}>
+                  These reveal automatically as you mark their chapters read — the
+                  real images are kept off your screen until then, so
+                  nothing&apos;s spoiled.
+                </p>
+              </div>
+            ) : null}
           </div>
-          <span className="text-[12px]" style={{ color: "var(--muted)" }}>
-            of {total}
-          </span>
-        </div>
+        ) : null}
       </div>
 
       {/* Focused single-chapter view. The Mark-read button here is how you set
@@ -498,39 +468,97 @@ export function ChapterSection({
           opacity: unlocked ? 1 : 0.85,
         }}
       >
-        <div className="flex items-center gap-3">
-          <span
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full font-mono text-[12px] font-semibold"
+        {/* Chapter selector — step with the arrows or type a number to jump.
+            Viewing here never changes your spoiler line. */}
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setFocus(focusNum - 1)}
+            disabled={focusNum <= 1}
+            aria-label="Previous chapter"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] disabled:opacity-40"
             style={{
               border: "1px solid var(--line-2)",
               background: "var(--obsidian-3)",
-              color: unlocked ? "var(--ember-soft)" : "var(--muted-2)",
+              color: "var(--silver)",
             }}
           >
-            {focused.number}
-          </span>
-          <span
-            className="min-w-0 flex-1 truncate text-[15px] font-semibold"
+            <Arrow dir="left" />
+          </button>
+          <div className="flex items-center gap-1.5 text-[13px]">
+            <span style={{ color: "var(--muted)" }}>Chapter</span>
+            <input
+              type="number"
+              min={1}
+              max={total}
+              value={focusNum}
+              onChange={(e) => {
+                const n = parseInt(e.target.value, 10);
+                if (!Number.isNaN(n)) setFocus(Math.min(Math.max(n, 1), total));
+              }}
+              aria-label="Chapter number"
+              className="h-9 w-12 rounded-[8px] px-1 text-center text-[14px] font-semibold outline-none"
+              style={{
+                border: "1px solid var(--line-2)",
+                background: "var(--obsidian-3)",
+                color: "var(--silver-bright)",
+              }}
+            />
+            <span style={{ color: "var(--muted)" }}>of {total}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFocus(focusNum + 1)}
+            disabled={focusNum >= total}
+            aria-label="Next chapter"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] disabled:opacity-40"
+            style={{
+              border: "1px solid var(--line-2)",
+              background: "var(--obsidian-3)",
+              color: "var(--silver)",
+            }}
+          >
+            <Arrow dir="right" />
+          </button>
+        </div>
+
+        {/* Chapter title + a small lock cue when you haven't reached it. */}
+        <div className="mt-3 flex items-center gap-2">
+          {!unlocked ? (
+            <span className="shrink-0" style={{ color: "var(--muted-2)" }}>
+              <LockIcon size={15} />
+            </span>
+          ) : null}
+          <h3
+            className="min-w-0 flex-1 truncate text-[16px] font-semibold"
             style={{ color: "var(--silver-bright)" }}
           >
             {focused.title || `Chapter ${focused.number}`}
-          </span>
-          {unlocked ? (
+          </h3>
+        </div>
+
+        {/* Primary action: a clear full-width CTA while this chapter is still
+            locked; a quiet "read" toggle once it's unlocked. */}
+        {unlocked ? (
+          <div className="mt-3 flex justify-end">
             <MarkReadButton
               bookId={bookId}
               through={focused.number - 1}
               label="✓ Read"
-              filled
+              filled={false}
             />
-          ) : (
+          </div>
+        ) : (
+          <div className="mt-3">
             <MarkReadButton
               bookId={bookId}
               through={focused.number}
               label={`Mark ch. ${focused.number} read`}
-              filled={false}
+              filled
+              full
             />
-          )}
-        </div>
+          </div>
+        )}
 
         {unlocked ? (
           <>
