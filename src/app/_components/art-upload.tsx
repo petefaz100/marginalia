@@ -45,18 +45,15 @@ export function ArtUpload({
     return (
       <div
         className="mt-4 flex flex-col items-start gap-2 rounded-[var(--radius-sm)] p-3.5"
-        style={{
-          border: "1px solid var(--line)",
-          background: "var(--obsidian-2)",
-        }}
+        style={{ background: "rgba(224,104,63,.08)" }}
       >
         <p
-          className="text-[11px] tracking-wide uppercase"
+          className="text-[11.5px] tracking-wide uppercase"
           style={{ color: "var(--ember-soft)" }}
         >
           {isMod ? "✓ Added" : "✓ Submitted"}
         </p>
-        <p className="text-[13px]" style={{ color: "var(--silver)" }}>
+        <p className="text-[13.5px]" style={{ color: "var(--silver)" }}>
           {isMod
             ? "Image added — it's live now for readers who've reached this chapter."
             : "Thanks — your art is in the moderation queue. It'll appear here once a moderator approves it."}
@@ -83,23 +80,19 @@ export function ArtUpload({
     <form
       ref={formRef}
       action={formAction}
-      className="mt-4 flex flex-col gap-3 rounded-[var(--radius-sm)] p-3.5"
-      style={{
-        border: "1px solid var(--line)",
-        background: "var(--obsidian-2)",
-      }}
+      className="mt-4 flex flex-col gap-3"
     >
       <input type="hidden" name="bookId" value={bookId} />
 
       <p
-        className="text-[11px] tracking-wide uppercase"
+        className="text-[11.5px] tracking-wide uppercase"
         style={{ color: "var(--muted)" }}
       >
         {isMod ? "Add art to this book" : "Contribute art"}
       </p>
 
       <label className="flex flex-col gap-1">
-        <span className="text-[12px]" style={{ color: "var(--silver)" }}>
+        <span className="text-[12.5px]" style={{ color: "var(--silver)" }}>
           Chapter (sets the spoiler level)
         </span>
         <select
@@ -139,7 +132,7 @@ export function ArtUpload({
             className="max-h-[180px] w-auto rounded-[8px] object-contain"
           />
         ) : (
-          <span className="text-[13px]" style={{ color: "var(--muted)" }}>
+          <span className="text-[13.5px]" style={{ color: "var(--muted)" }}>
             Tap to choose an image (JPEG, PNG, WebP, GIF · max 8MB)
           </span>
         )}
@@ -218,7 +211,7 @@ export function ArtUpload({
       >
         {pending ? "Uploading…" : isMod ? "Add image" : "Submit for review"}
       </button>
-      <p className="text-[11.5px]" style={{ color: "var(--muted)" }}>
+      <p className="text-[12px]" style={{ color: "var(--muted)" }}>
         {isMod
           ? "As a moderator, images you add go live immediately — no review needed."
           : "Submissions are reviewed by a moderator before they appear."}

@@ -197,22 +197,18 @@ function Viewer({
       aria-modal="true"
       onClick={onClose}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(8,7,11,.86)" }}
+      style={{ background: "rgba(8,7,11,.93)" }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         className="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-[var(--radius)]"
         style={{
           maxWidth: "min(94vw, 680px)",
-          border: "1px solid var(--line-2)",
           background: "var(--obsidian-2)",
         }}
       >
         {/* Toolbar: view toggle + counter + close (shown in both views) */}
-        <div
-          className="flex items-center justify-between gap-2 px-3 py-2"
-          style={{ borderBottom: "1px solid var(--line)" }}
-        >
+        <div className="flex items-center justify-between gap-2 px-3 py-2">
           <button
             type="button"
             onClick={() =>

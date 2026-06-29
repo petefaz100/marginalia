@@ -43,15 +43,8 @@ export function Contribute({
 
       {open ? (
         <div className="mt-3 flex flex-col gap-4">
-          {/* Add a chapter */}
-          <form
-            action={addChapter}
-            className="flex items-end gap-2 rounded-[var(--radius-sm)] p-3"
-            style={{
-              border: "1px solid var(--line)",
-              background: "var(--obsidian-2)",
-            }}
-          >
+          {/* Add a chapter — borderless, fields sit straight on the page. */}
+          <form action={addChapter} className="flex items-end gap-2">
             <input type="hidden" name="bookId" value={bookId} />
             <label className="shrink-0">
               <span
