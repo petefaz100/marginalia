@@ -277,12 +277,10 @@ export function ChapterSection({
 }) {
   const total = chapters.length;
   const initialFocus = readThrough >= 1 ? readThrough : 1;
-  const initialChapter = chapters.find((c) => c.number === initialFocus);
-  const initialHasArt =
-    !!initialChapter && (artByChapter[initialChapter.id]?.length ?? 0) > 0;
 
   const [focus, setFocus] = useState(initialFocus);
-  const [tab, setTab] = useState<TabKey>(initialHasArt ? "art" : "talk");
+  // Art is always the first thing a reader sees when a chapter opens.
+  const [tab, setTab] = useState<TabKey>("art");
   // The Art tab can show as a swipeable carousel or a grid; the reader picks.
   const [artLayout, setArtLayout] = useState<ArtLayout>("carousel");
   const [query, setQuery] = useState("");
@@ -320,10 +318,11 @@ export function ChapterSection({
   const focusedArt = artByChapter[focused.id] ?? [];
   const focusedComments = commentsByChapter[focused.id] ?? [];
 
-  // Everything unlocked, flattened, for the search grid.
+  // Everything unlocked, flattened, for the search grid. We stamp each piece
+  // with its chapter number so the mixed grid can show a faint chapter badge.
   const unlockedChapters = chapters.filter((c) => c.number <= readThrough);
-  const allReadArt: GalleryArt[] = unlockedChapters.flatMap(
-    (c) => artByChapter[c.id] ?? [],
+  const allReadArt: GalleryArt[] = unlockedChapters.flatMap((c) =>
+    (artByChapter[c.id] ?? []).map((a) => ({ ...a, chapter_number: c.number })),
   );
   const q = query.trim().toLowerCase();
   const filteredAll = !q
@@ -475,7 +474,12 @@ export function ChapterSection({
             {/* Unlocked art grid — when searching or when opted in. */}
             {q || showUnlocked ? (
               filteredAll.length > 0 ? (
-                <ArtGallery art={filteredAll} bookId={bookId} isMod={isMod} />
+                <ArtGallery
+                  art={filteredAll}
+                  bookId={bookId}
+                  isMod={isMod}
+                  showChapterBadge
+                />
               ) : (
                 <p className="mt-3 text-[13px]" style={{ color: "var(--muted)" }}>
                   {q
@@ -515,11 +519,16 @@ export function ChapterSection({
         </div>
       ) : null}
 
-      {/* Focused chapter — borderless so the art carousel reads as the main,
+      {/* The chapter view and the art finder are two separate "pages" — only
+          one shows at a time. While the finder is open the chapter is hidden
+          entirely, so the screen stays on a single task.
+
+          Borderless on purpose: the art carousel reads as the main,
           near-full-bleed content (like flipping through a mobile app) instead of
           one more boxed section. Stepping here never changes your reading
           position; that's set only by the picker above. */}
-      <div style={{ opacity: unlocked ? 1 : 0.85 }}>
+      {panel !== "find" ? (
+        <div style={{ opacity: unlocked ? 1 : 0.85 }}>
         {/* Chapter selector — step with the arrows or type a number to jump.
             Viewing here never changes your spoiler line. */}
         <div className="flex items-center justify-between gap-2">
@@ -700,7 +709,8 @@ export function ChapterSection({
             </span>
           </div>
         )}
-      </div>
+        </div>
+      ) : null}
     </>
   );
 }

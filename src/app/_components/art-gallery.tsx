@@ -11,6 +11,10 @@ export type GalleryArt = {
   artist_handle: string | null;
   credit_url: string | null;
   status: "pending" | "approved" | "rejected";
+  // Optional: which chapter this piece belongs to. Only used when a grid mixes
+  // pieces from several chapters (the "all unlocked art" view) so each tile can
+  // wear a faint chapter badge.
+  chapter_number?: number | null;
 };
 
 // Thumbnail grid for a chapter's art, with a tap-to-open viewer. Approved art
@@ -23,10 +27,14 @@ export function ArtGallery({
   art,
   bookId,
   isMod = false,
+  showChapterBadge = false,
 }: {
   art: GalleryArt[];
   bookId?: string;
   isMod?: boolean;
+  // When true, each tile shows a faint chapter badge (for grids that mix
+  // chapters, like "all unlocked art").
+  showChapterBadge?: boolean;
 }) {
   const router = useRouter();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -87,6 +95,17 @@ export function ArtGallery({
                   }}
                 >
                   {piece.status}
+                </span>
+              ) : null}
+              {showChapterBadge && piece.chapter_number != null ? (
+                <span
+                  className="absolute right-1 bottom-1 rounded-full px-1.5 py-0.5 text-[9.5px] font-semibold"
+                  style={{
+                    background: "rgba(232,228,240,.08)",
+                    color: "var(--muted-2)",
+                  }}
+                >
+                  Ch. {piece.chapter_number}
                 </span>
               ) : null}
             </button>
